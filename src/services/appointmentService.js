@@ -1,113 +1,148 @@
-const { readData, writeData } = require("./jsonStorage");
-const Appointment = require("../models/appointment");
+const { v4: uuidv4 } = require("uuid");
+const fs = require("fs").promises;
+const path = require("path");
+const userService = require("./userService"); // Потрібно для отримання даних користувача
+const APPOINTMENTS_FILE = path.join(__dirname, "../../data/appointments.json");
 
-const APPOINTMENTS_FILE = "appointments.json";
-const BLOCKED_SLOTS_FILE = "blocked_slots.json"; // Новий файл для заблокованих слотів
+async function readAppointments() {
+  try {
+    const data = await fs.readFile(APPOINTMENTS_FILE, "utf8");
+    return JSON.parse(data);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    console.error("Помилка читання файлу записів:", error);
+    return [];
+  }
+}
+
+async function writeAppointments(appointments) {
+  try {
+    await fs.writeFile(
+      APPOINTMENTS_FILE,
+      JSON.stringify(appointments, null, 2),
+      "utf8"
+    );
+  } catch (error) {
+    console.error("Помилка запису файлу записів:", error);
+  }
+}
 
 async function getAllAppointments() {
-  return readData(APPOINTMENTS_FILE);
+  return await readAppointments();
 }
 
-async function getAppointmentsByUserId(userId) {
-  const appointments = await readData(APPOINTMENTS_FILE);
-  return appointments.filter(
-    (a) => a.userId === userId && a.status === "active"
-  );
+/**
+ * Отримує майбутні записи за ідентифікатором користувача.
+ * @param {number} userId - ID користувача.
+ * @returns {Promise<Array>} Масив майбутніх записів для вказаного користувача.
+ */
+async function getFutureAppointmentsByUserId(userId) {
+  const appointments = await readAppointments();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Сьогоднішня дата без часу
+
+  return appointments
+    .filter((app) => {
+      if (app.userId !== userId) {
+        return false;
+      }
+      const appointmentDate = new Date(app.date); // Дата запису
+      const [appHour, appMinute] = app.time.split(":").map(Number);
+      const appointmentDateTime = new Date(
+        appointmentDate.getFullYear(),
+        appointmentDate.getMonth(),
+        appointmentDate.getDate(),
+        appHour,
+        appMinute
+      );
+
+      // Перевіряємо, чи запис у майбутньому
+      return appointmentDateTime > now;
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.date + " " + a.time) - new Date(b.date + " " + b.time)
+    ); // Сортуємо за датою і часом
 }
 
-async function addAppointment(appointmentData) {
-  const appointments = await readData(APPOINTMENTS_FILE);
-  const newAppointment = new Appointment(
-    Date.now().toString(), // Простий унікальний ID
-    appointmentData.userId,
-    appointmentData.userName,
-    appointmentData.userPhone,
-    appointmentData.service,
-    appointmentData.date,
-    appointmentData.time
+async function getBookedTimesForDate(date) {
+  const appointments = await readAppointments();
+  return appointments.filter((app) => app.date === date).map((app) => app.time);
+}
+
+async function createAppointment(appointmentData) {
+  const appointments = await readAppointments();
+  const isDuplicate = appointments.some(
+    (app) =>
+      app.userId === appointmentData.userId &&
+      app.service === appointmentData.service &&
+      app.date === appointmentData.date &&
+      app.time === appointmentData.time
   );
+
+  if (isDuplicate) {
+    console.warn(
+      `Спроба створити дублікат запису для користувача ${appointmentData.userId} на ${appointmentData.date} о ${appointmentData.time}`
+    );
+    return appointments.find(
+      (app) =>
+        app.userId === appointmentData.userId &&
+        app.service === appointmentData.service &&
+        app.date === appointmentData.date &&
+        app.time === appointmentData.time
+    );
+  }
+
+  const newAppointment = {
+    id: uuidv4(),
+    createdAt: new Date().toISOString(),
+    ...appointmentData,
+  };
   appointments.push(newAppointment);
-  await writeData(APPOINTMENTS_FILE, appointments);
+  await writeAppointments(appointments);
   return newAppointment;
 }
 
+/**
+ * Скасовує запис за ID.
+ * @param {string} appointmentId - ID запису для скасування.
+ * @returns {Promise<object|null>} Скасований запис, якщо знайдено, інакше null.
+ */
 async function cancelAppointment(appointmentId) {
-  const appointments = await readData(APPOINTMENTS_FILE);
-  const index = appointments.findIndex((a) => a.id === appointmentId);
+  let appointments = await readAppointments();
+  const index = appointments.findIndex((app) => app.id === appointmentId);
+
   if (index !== -1) {
-    appointments[index].status = "canceled";
-    await writeData(APPOINTMENTS_FILE, appointments);
-    return true;
+    const canceledAppointment = appointments[index];
+    appointments.splice(index, 1); // Видаляємо запис
+    await writeAppointments(appointments);
+    return canceledAppointment; // Повертаємо скасований запис
   }
-  return false;
+  return null;
 }
 
-async function isSlotBooked(date, time) {
-  const appointments = await readData(APPOINTMENTS_FILE);
-  const booked = appointments.some(
-    (a) => a.date === date && a.time === time && a.status === "active"
-  );
-  if (booked) return true;
-
-  const blockedSlots = await readData(BLOCKED_SLOTS_FILE);
-  const blocked = blockedSlots.some((s) => s.date === date && s.time === time);
-  return blocked;
-}
-
-async function getAvailableTimes(date, allAvailableTimes) {
-  const bookedAndBlocked = await readData(APPOINTMENTS_FILE);
-  const blockedSlots = await readData(BLOCKED_SLOTS_FILE);
-
-  const unavailable = new Set();
-  bookedAndBlocked.forEach((a) => {
-    if (a.date === date && a.status === "active") {
-      unavailable.add(a.time);
+// Перевірка, чи існує директорія 'data', якщо ні - створити
+(async () => {
+  const dataDir = path.dirname(APPOINTMENTS_FILE);
+  try {
+    await fs.access(dataDir);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      await fs.mkdir(dataDir, { recursive: true });
+      console.log(`Директорія ${dataDir} створена.`);
+    } else {
+      console.error("Помилка перевірки/створення директорії:", error);
     }
-  });
-  blockedSlots.forEach((s) => {
-    if (s.date === date) {
-      unavailable.add(s.time);
-    }
-  });
-
-  const now = new Date();
-  const today = now.toISOString().split("T")[0];
-  const currentTime = now.toTimeString().slice(0, 5);
-
-  return allAvailableTimes.filter((time) => {
-    const isPastSlot = date === today && time <= currentTime;
-    return !unavailable.has(time) && !isPastSlot;
-  });
-}
-
-async function blockSlot(date, time) {
-  const blockedSlots = await readData(BLOCKED_SLOTS_FILE);
-  if (!blockedSlots.some((s) => s.date === date && s.time === time)) {
-    blockedSlots.push({ date, time, blockedAt: new Date().toISOString() });
-    await writeData(BLOCKED_SLOTS_FILE, blockedSlots);
-    return true;
   }
-  return false;
-}
-
-async function markAppointmentAsCompleted(appointmentId) {
-  const appointments = await readData(APPOINTMENTS_FILE);
-  const index = appointments.findIndex((a) => a.id === appointmentId);
-  if (index !== -1) {
-    appointments[index].status = "completed";
-    await writeData(APPOINTMENTS_FILE, appointments);
-    return true;
-  }
-  return false;
-}
+})();
 
 module.exports = {
   getAllAppointments,
-  getAppointmentsByUserId,
-  addAppointment,
-  cancelAppointment,
-  isSlotBooked,
-  getAvailableTimes,
-  blockSlot,
-  markAppointmentAsCompleted,
+  getFutureAppointmentsByUserId, // Оновлено
+  getBookedTimesForDate,
+  createAppointment,
+  cancelAppointment, // Додано
+  getUser: userService.getUser, // Експортуємо функцію отримання користувача, якщо вона потрібна безпосередньо тут
 };

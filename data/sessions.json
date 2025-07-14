@@ -4,7 +4,16 @@
       "id": "1957983074:1957983074",
       "data": {
         "language": "uk",
-        "userState": "waiting_for_service"
+        "userState": "idle",
+        "selectedService": "pedicure",
+        "selectedDate": "2025-07-14"
+      }
+    },
+    {
+      "id": "1044192531:1044192531",
+      "data": {
+        "language": "pl",
+        "userState": "awaiting_language_selection"
       }
     }
   ]

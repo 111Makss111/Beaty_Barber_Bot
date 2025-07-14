@@ -2,19 +2,19 @@ const { Markup } = require("telegraf");
 const { getMessage } = require("./i18n");
 const { AVAILABLE_TIMES } = require("./constants");
 
-// Клавіатура для вибору мови (спочатку, бо вона використовується на старті)
-const languageSelectionKeyboard = () => {
-  return Markup.inlineKeyboard([
-    Markup.button.callback("🇺🇦 Українська", "set_lang_uk"),
-    Markup.button.callback("🇵🇱 Polski", "set_lang_pl"),
-  ]);
+// Нова клавіатура для вибору мови (ReplyKeyboard)
+const languageSelectionReplyKeyboard = () => {
+  return Markup.keyboard([["🇺🇦 Українська"], ["🇵🇱 Polski"]]).resize();
 };
 
-// Клавіатура головного меню (після languageSelectionKeyboard, але до її використання)
+// Клавіатура головного меню
 const mainMenuKeyboard = (ctx) => {
   return Markup.keyboard([
-    [getMessage(ctx, "bookAppointment"), getMessage(ctx, "viewMyAppointments")],
-    [getMessage(ctx, "portfolio"), getMessage(ctx, "changeLanguage")],
+    [
+      getMessage(ctx, "bookAppointmentButton"),
+      getMessage(ctx, "cancelAppointmentButton"),
+    ],
+    [getMessage(ctx, "myCabinetButton"), getMessage(ctx, "portfolioButton")],
   ]).resize();
 };
 
@@ -32,30 +32,109 @@ const confirmationKeyboard = (ctx) => {
   ]);
 };
 
-const generateTimeKeyboard = (ctx, availableTimes) => {
-  const buttons = availableTimes.map((time) =>
-    Markup.button.callback(time, `time_${time}`)
-  );
+/**
+ * Генерує інлайн-клавіатуру з доступними часами.
+ * @param {object} ctx - Об'єкт контексту Telegraf для отримання мови.
+ * @param {string[]} bookedTimes - Масив заброньованих годин для обраної дати.
+ * @param {string} selectedDate - Обрана дата у форматі YYYY-MM-DD.
+ * @returns {object} Inline-клавіатура Telegraf.
+ */
+const generateTimeKeyboard = (ctx, bookedTimes = [], selectedDate) => {
+  const now = new Date();
+  const todayDate = `${now.getFullYear()}-${(now.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")}`;
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  const buttons = AVAILABLE_TIMES.map((time) => {
+    const isBooked = bookedTimes.includes(time);
+
+    // Додаткова перевірка: якщо дата сьогоднішня, і час вже минув
+    const [hour, minute] = time.split(":").map(Number);
+    const isPastTimeToday =
+      selectedDate === todayDate &&
+      (hour < currentHour || (hour === currentHour && minute <= currentMinute));
+
+    if (isBooked || isPastTimeToday) {
+      return Markup.button.callback(`[${time}]`, "time_booked_or_past"); // Неактивна кнопка
+    } else {
+      return Markup.button.callback(time, `time_selected_${time}`);
+    }
+  });
+
+  // Додаємо кнопку "Повернутись назад"
+  buttons.push(
+    Markup.button.callback(
+      getMessage(ctx, "backToMainMenu"),
+      "back_to_calendar_from_time"
+    )
+  ); // Нова кнопка повернення
+
   return Markup.inlineKeyboard(buttons, { columns: 3 });
 };
 
 const generateServiceKeyboard = (ctx) => {
+  // Оновлений список послуг
   const services = [
-    { id: "haircut", name: "Стрижка" },
-    { id: "manicure", name: "Манікюр" },
-    { id: "massage", name: "Масаж" },
+    { id: "manicure", nameKey: "manicureService" },
+    { id: "pedicure", nameKey: "pedicureService" },
+    { id: "removal", nameKey: "removalService" },
+    { id: "strengthening", nameKey: "strengtheningService" },
   ];
-  const buttons = services.map((service) =>
-    Markup.button.callback(service.name, `service_${service.id}`)
-  );
-  return Markup.inlineKeyboard(buttons, { columns: 2 });
-};
 
+  const buttons = services.map((service) =>
+    Markup.button.callback(
+      getMessage(ctx, service.nameKey),
+      `service_${service.id}`
+    )
+  );
+
+  // Додаємо кнопку "Повернутись назад"
+  buttons.push(
+    Markup.button.callback(
+      getMessage(ctx, "backToMainMenu"),
+      "back_to_main_menu_from_services"
+    )
+  );
+
+  return Markup.inlineKeyboard(buttons, { columns: 2 }); // Можна налаштувати кількість стовпців
+};
+/**
+ * Генерує інлайн-клавіатуру з майбутніми записами користувача.
+ * @param {object} ctx - Об'єкт контексту Telegraf для отримання мови.
+ * @param {Array<object>} appointments - Масив об'єктів записів користувача.
+ * @returns {object} Inline-клавіатура Telegraf.
+ */
+const generateUserAppointmentsKeyboard = (ctx, appointments) => {
+  const buttons = [];
+
+  // Якщо є записи, створюємо кнопки для кожного
+  if (appointments && appointments.length > 0) {
+    appointments.forEach((app) => {
+      const serviceName = getMessage(ctx, `${app.service}Service`); // Отримуємо локалізовану назву послуги
+      buttons.push([
+        Markup.button.callback(
+          `❌ ${serviceName} ${app.date} о ${app.time}`,
+          `cancel_appointment_id_${app.id}`
+        ),
+      ]);
+    });
+  }
+
+  // Додаємо кнопку "Назад"
+  buttons.push([
+    Markup.button.callback(getMessage(ctx, "back"), "back_from_cancel_list"),
+  ]);
+
+  return Markup.inlineKeyboard(buttons);
+};
 module.exports = {
   mainMenuKeyboard,
   adminPanelKeyboard,
   confirmationKeyboard,
   generateTimeKeyboard,
   generateServiceKeyboard,
-  languageSelectionKeyboard,
+  languageSelectionReplyKeyboard, // Експортуємо нову клавіатуру
+  generateUserAppointmentsKeyboard,
 };

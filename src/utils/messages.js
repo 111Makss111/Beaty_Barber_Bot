@@ -25,29 +25,83 @@ const messages = {
     appointmentReminder2h: (service, date, time) =>
       `Нагадування: Ваш запис на "${service}" відбудеться через 2 години, ${date}, о ${time}.`,
     alreadyBooked: "На жаль, цей час вже зайнятий. Будь ласка, оберіть інший.",
-    selectLanguage: "Будь ласка, оберіть мову:", // Нове повідомлення
-    languageSet: "Мову встановлено на українську. 🇺🇦", // Нове повідомлення
-    bookAppointment: "Записатись на прийом 📅", // Додано для клавіатури
-    viewMyAppointments: "Мої записи 📋", // Додано для клавіатури
-    portfolio: "Портфоліо 📸", // Додано для клавіатури
-    changeLanguage: "Змінити мову 🌐", // Додано для клавіатури
-    confirm: "Підтвердити ✅", // Додано для клавіатури
-    cancel: "Скасувати ❌", // Додано для клавіатури
-    viewAllAppointments: "Переглянути всі записи 📊", // Додано для клавіатури
-    blockDateTime: "Заблокувати дату/час 🚫", // Додано для клавіатури
-    addPortfolioPhoto: "Додати фото до портфоліо 🖼️", // Додано для клавіатури
-    backToMainMenu: "Повернутись в головне меню ↩️", // Додано для клавіатури
     selectLanguage: "Будь ласка, оберіть мову:",
-    languageSet: "Мову встановлено на українську. 🇺🇦",
+    languageSet: "Мову встановлено. ✅",
+    pleaseSelectLanguageFromButtons:
+      "Будь ласка, оберіть мову, натиснувши на одну з кнопок.",
     enterName: "Будь ласка, введіть ваше ім'я та прізвище:",
     enterPhone:
       'Будь ласка, введіть ваш номер телефону (або натисніть "Пропустити"):',
     skipPhone: "Пропустити",
     sendMyContact: "Надіслати мій контакт",
-    bookAppointment: "Записатись на прийом 📅",
-    viewMyAppointments: "Мої записи 📋",
-    portfolio: "Портфоліо 📸",
+    bookAppointmentButton: "Записатись 📅",
     cancelAppointmentButton: "Скасувати запис ❌",
+    myCabinetButton: "Мій кабінет 👤",
+    portfolioButton: "Портфоліо 📸",
+    changeLanguage: "Змінити мову 🌐",
+    confirm: "Підтвердити ✅",
+    cancel: "Скасувати ❌",
+    viewAllAppointments: "Переглянути всі записи 📊",
+    blockDateTime: "Заблокувати дату/час 🚫",
+    addPortfolioPhoto: "Додати фото до портфоліо 🖼️",
+    backToMainMenu: "Повернутись в головне меню ↩️",
+    noFutureAppointments: "Немає майбутніх записів.",
+    notSpecified: "Не вказано",
+    clientProfile: "Профіль клієнта",
+    service: "Послуга",
+    location: "Локація",
+    scheduled: "Заплановано",
+    time: "Час",
+    manicureService: "Манікюр",
+    pedicureService: "Педікюр",
+    removalService: "Зняття",
+    strengtheningService: "Укріплення",
+
+    // Додаємо назви місяців та днів тижня
+    monthNames: [
+      "Січень",
+      "Лютий",
+      "Березень",
+      "Квітень",
+      "Травень",
+      "Червень",
+      "Липень",
+      "Серпень",
+      "Вересень",
+      "Жовтень",
+      "Листопад",
+      "Грудень",
+    ],
+    dayNames: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"],
+    invalidPastDate:
+      "Ця дата вже в минулому. Будь ласка, оберіть майбутню дату. 📅",
+    ancelAppointmentButton: "Скасувати запис ❌",
+    myCabinetButton: "Мій кабінет 👤", // Якщо ще не додано
+    noFutureAppointments: "У вас немає майбутніх записів.",
+    yourAppointments: "Ваші майбутні записи:",
+    selectAppointmentToCancel: "Оберіть запис для скасування:",
+    confirmCancelAppointment: (service, date, time) =>
+      `Ви впевнені, що хочете скасувати запис на "${service}" ${date} о ${time}?`,
+    appointmentCanceled: "Ваш запис успішно скасовано! ✅",
+    appointmentCancelFailed: "Не вдалося скасувати запис. Спробуйте ще раз.",
+    appointmentCanceledByClientAdmin: (
+      userName,
+      userId,
+      service,
+      date,
+      time,
+      appointmentId
+    ) => `
+❌ *ЗАПИС СКАСОВАНО КЛІЄНТОМ!*
+━━━━━━━━━━━━━━━
+👤 *Клієнт:* ${userName} (ID: \`${userId}\`)
+🔧 *Послуга:* ${service}
+📆 *Дата:* ${date}
+⏰ *Час:* ${time}
+ID Запису: \`${appointmentId}\`
+━━━━━━━━━━━━━━━
+`,
+    back: "Назад ↩️",
   },
   pl: {
     start: (name) =>
@@ -75,28 +129,83 @@ const messages = {
     appointmentReminder2h: (service, date, time) =>
       `Przypomnienie: Twoja wizyta na "${service}" odbędzie się za 2 godziny, ${date}, o ${time}.`,
     alreadyBooked: "Niestety, ten termin jest już zajęty. Proszę wybrać inny.",
-    selectLanguage: "Proszę wybrać język:", // Nowa wiadomość
-    languageSet: "Język ustawiony na polski. 🇵🇱", // Nowa wiadomość
-    bookAppointment: "Umów wizytę 📅", // Dodano dla klawiatury
-    viewMyAppointments: "Moje wizyty 📋", // Dodano dla klawiatury
-    portfolio: "Portfolio 📸", // Dodano dla klawiatury
-    changeLanguage: "Zmień język 🌐", // Dodano dla klawiatury
-    confirm: "Potwierdź ✅", // Dodano dla klawiatury
-    cancel: "Anuluj ❌", // Dodano dla klawiatury
-    viewAllAppointments: "Wyświetl wszystkie rezerwacje 📊", // Dodano dla klawiatury
-    blockDateTime: "Zablokuj datę/godzinę 🚫", // Dodano dla klawiatury
-    addPortfolioPhoto: "Dodaj zdjęcie do portfolio 🖼️", // Dodano dla klawiatury
-    backToMainMenu: "Powrót do menu głównego ↩️", // Dodano dla klawiatury
     selectLanguage: "Proszę wybrać język:",
-    languageSet: "Język ustawiony na polski. 🇵🇱",
+    languageSet: "Język został ustawiony. ✅",
+    pleaseSelectLanguageFromButtons:
+      "Proszę wybrać język, naciskając jeden z przycisków.",
     enterName: "Proszę podać swoje imię i nazwisko:",
     enterPhone: 'Proszę podać swój numer telefonu (lub naciśnij "Pomiń"):',
     skipPhone: "Pomiń",
     sendMyContact: "Wyślij mój kontakt",
-    bookAppointment: "Umów wizytę 📅",
-    viewMyAppointments: "Moje wizyty 📋",
-    portfolio: "Portfolio 📸",
+    bookAppointmentButton: "Umów wizytę 📅",
     cancelAppointmentButton: "Anuluj rezerwację ❌",
+    myCabinetButton: "Mój gabinet 👤",
+    portfolioButton: "Portfolio 📸",
+    changeLanguage: "Zmień język 🌐",
+    confirm: "Potwierdź ✅",
+    cancel: "Anuluj ❌",
+    viewAllAppointments: "Wyświetl wszystkie rezerwacje 📊",
+    blockDateTime: "Zablokuj datę/godzinę 🚫",
+    addPortfolioPhoto: "Dodaj zdjęcie do portfolio 🖼️",
+    backToMainMenu: "Powrót do menu głównego ↩️",
+    noFutureAppointments: "Brak przyszłych rezerwacji.",
+    notSpecified: "Nie podano",
+    clientProfile: "Profil klienta",
+    service: "Usługa",
+    location: "Lokalizacja",
+    scheduled: "Zaplanowano",
+    time: "Godzina",
+    manicureService: "Manicure",
+    pedicureService: "Pedicure",
+    removalService: "Usunięcie",
+    strengtheningService: "Wzmocnienie",
+
+    // Додаємо назви місяців та днів тижня
+    monthNames: [
+      "Styczeń",
+      "Luty",
+      "Marzec",
+      "Kwiecień",
+      "Maj",
+      "Czerwiec",
+      "Lipiec",
+      "Sierpień",
+      "Wrzesień",
+      "Październik",
+      "Listopad",
+      "Grudzień",
+    ],
+    dayNames: ["Pn", "Wt", "Śr", "Cz", "Pt", "Sb", "Nd"],
+    invalidPastDate:
+      "Ta data jest już przeszłością. Proszę wybrać przyszłą datę. 📅",
+    cancelAppointmentButton: "Anuluj rezerwację ❌",
+    myCabinetButton: "Mój gabinet 👤", // Якщо ще не додано
+    noFutureAppointments: "Nie masz nadchodzących rezerwacji.",
+    yourAppointments: "Twoje nadchodzące rezerwacje:",
+    selectAppointmentToCancel: "Wybierz rezerwację do anulowania:",
+    confirmCancelAppointment: (service, date, time) =>
+      `Czy na pewno chcesz anulować rezerwację na "${service}" w dniu ${date} o ${time}?`,
+    appointmentCanceled: "Twoja rezerwacja została pomyślnie anulowana! ✅",
+    appointmentCancelFailed:
+      "Nie udało się anulować rezerwacji. Spróbuj ponownie.",
+    appointmentCanceledByClientAdmin: (
+      userName,
+      userId,
+      service,
+      date,
+      time,
+      appointmentId
+    ) => `
+❌ *REZERWACJA ANULOWANA PRZEZ KLIENTA!*
+━━━━━━━━━━━━━━━
+👤 *Klient:* ${userName} (ID: \`${userId}\`)
+🔧 *Usługa:* ${service}
+📆 *Data:* ${date}
+⏰ *Czas:* ${time}
+ID Rezerwacji: \`${appointmentId}\`
+━━━━━━━━━━━━━━━
+`,
+    back: "Wstecz ↩️",
   },
 };
 
