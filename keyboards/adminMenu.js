@@ -7,7 +7,10 @@ function getAdminMenuKeyboard(lang) {
       getTranslation(lang, "view_all_records_btn"),
       getTranslation(lang, "block_date_time_btn"),
     ],
-    [getTranslation(lang, "add_to_portfolio_btn")],
+    [
+      getTranslation(lang, "add_to_portfolio_btn"),
+      getTranslation(lang, "block_client_btn"),
+    ],
   ]).resize();
 }
 

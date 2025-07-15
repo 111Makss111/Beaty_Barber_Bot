@@ -3,13 +3,13 @@ const { getTranslation } = require("../translate");
 
 function getTimeKeyboard(selectedDate, bookedAppointments, lang) {
   const timeSlots = [
-    "09:00",
-    "10:30",
-    "12:00",
-    "13:30",
-    "15:00",
-    "16:30",
-    "18:00",
+    "01:12",
+    "01:15",
+    "01:18",
+    "01:11",
+    "01:14",
+    "01:17",
+    "01:09",
   ];
   const keyboard = [];
   const now = new Date();

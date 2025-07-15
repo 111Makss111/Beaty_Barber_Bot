@@ -6,10 +6,11 @@ const {
   getMainMenuKeyboard,
 } = require("../keyboards");
 const { getServicesKeyboard } = require("../keyboards");
+const { scheduleAppointmentReminders } = require("../utils/notification");
 
 const bookedAppointments = [];
 
-function setupTimeHandlers(bot, ADMIN_IDS) {
+function setupTimeHandlers(bot, ADMIN_IDS, localSessionInstance) {
   bot.on("callback_query", async (ctx, next) => {
     const callbackData = ctx.callbackQuery.data;
     const userId = ctx.from.id;
@@ -125,8 +126,16 @@ function setupTimeHandlers(bot, ADMIN_IDS) {
           date: ctx.session.selectedDate,
           time: ctx.session.selectedTime,
           timestamp: new Date().toISOString(),
+          lang: ctx.session.lang, // <<<<< ДОДАНО ЦЕЙ РЯДОК
         };
         bookedAppointments.push(newAppointment);
+
+        scheduleAppointmentReminders(
+          bot,
+          newAppointment,
+          bookedAppointments,
+          localSessionInstance
+        );
 
         const serviceName = getTranslation(
           ctx.session.lang,
@@ -155,7 +164,7 @@ function setupTimeHandlers(bot, ADMIN_IDS) {
           ])
         );
 
-        // --- ЛОГІКА ДЛЯ АДМІН-ПОВІДОМЛЕННЯ (Оновлено) ---
+        // --- ЛОГІКА ДЛЯ АДМІН-ПОВІДОМЛЕННЯ ---
         const adminMessageText =
           `${getTranslation(
             ctx.session.lang,
@@ -177,7 +186,7 @@ function setupTimeHandlers(bot, ADMIN_IDS) {
             "admin_service",
             serviceName
           )}\n` +
-          `${getTranslation(ctx.session.lang, "admin_location", "Онлайн")}\n` + // <-- ДОДАНО ЛОКАЦІЮ
+          `${getTranslation(ctx.session.lang, "admin_location", "Онлайн")}\n` +
           `${getTranslation(ctx.session.lang, "admin_date", formattedDate)}\n` +
           `${getTranslation(
             ctx.session.lang,
@@ -188,28 +197,23 @@ function setupTimeHandlers(bot, ADMIN_IDS) {
 
         let userProfilePhotoFileId = null;
         try {
-          // Отримуємо фото профілю користувача
           const photos = await bot.telegram.getUserProfilePhotos(userId);
           if (photos.total_count > 0 && photos.photos[0].length > 0) {
-            // Беремо найбільший розмір фото (останній елемент у масиві розмірів)
             userProfilePhotoFileId =
               photos.photos[0][photos.photos[0].length - 1].file_id;
           }
         } catch (e) {
           console.error(`Failed to get user profile photos for ${userId}:`, e);
-          // Якщо сталася помилка, просто продовжимо без фото
         }
 
         for (const adminId of ADMIN_IDS) {
           try {
             if (userProfilePhotoFileId) {
-              // Якщо фото є, відправляємо його з підписом (текстом повідомлення)
               await bot.telegram.sendPhoto(adminId, userProfilePhotoFileId, {
                 caption: adminMessageText,
-                parse_mode: "HTML", // Можливо, захочеш використовувати MarkdownV2, тоді треба parse_mode: 'MarkdownV2'
+                parse_mode: "HTML",
               });
             } else {
-              // Якщо фото немає, відправляємо лише текстове повідомлення
               await bot.telegram.sendMessage(adminId, adminMessageText);
             }
           } catch (e) {

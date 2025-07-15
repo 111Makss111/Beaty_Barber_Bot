@@ -3,19 +3,17 @@
     {
       "id": "1957983074:1957983074",
       "data": {
-        "lang": "ua",
         "nextStep": null,
-        "userName": "авііва",
+        "lang": "ua",
+        "userName": "Макс",
         "userPhone": null
       }
     },
     {
       "id": "1044192531:1044192531",
       "data": {
-        "lang": "ua",
         "nextStep": "admin_menu",
-        "userName": "Ріі",
-        "userPhone": null
+        "lang": "ua"
       }
     }
   ]

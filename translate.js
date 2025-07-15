@@ -20,6 +20,7 @@ const translations = {
     admin_menu_welcome: "Вітаю в адмін-меню!",
     view_all_records_btn: "📋 Переглянути всі записи",
     block_date_time_btn: "🚫 Заблокувати Дату/Години",
+    block_client_btn: "🚫 Заблокувати клієнта",
     add_to_portfolio_btn: "➕ Додати до Портфоліо",
     back_to_main_menu_btn: "⬅️ Повернутись до головного меню",
     access_denied: "У вас немає доступу до цієї функції.",
@@ -104,6 +105,29 @@ const translations = {
     admin_cancelled_service: "🔧 Послуга: %s",
     admin_cancelled_date: "📆 Дата: %s",
     admin_cancelled_time: "⏰ Час: %s",
+    reminder_message_header: "🔔 Нагадування про ваш запис!",
+    reminder_service: "🔧 Послуга: %s",
+    reminder_date: "📆 Заплановано: %s",
+    reminder_time: "⏰ Початок: %s",
+    reminder_footer: "Чекаємо на вас!",
+    select_records_filter: "Оберіть, які записи бажаєте переглянути:",
+    filter_today_btn: "🗓️ На сьогодні",
+    filter_tomorrow_btn: "➡️ На завтра",
+    filter_this_week_btn: "📅 Цей тиждень",
+    filter_this_month_btn: "📈 Цей місяць",
+    filter_all_records_btn: "🗂️ Усі майбутні",
+    filter_specific_date_btn: "🔎 Конкретна дата", // Можливо, додамо пізніше
+    back_to_records_filters_btn: "⬅️ До фільтрів",
+    back_to_admin_menu_btn: "⬅️ До адмін-меню", // Використовуємо тут для повернення з перегляду записів
+    records_list_header: "📈 Активні записи:",
+    no_records_found: "Записів за обраним критерієм не знайдено.",
+    admin_menu_btn: "Адмін-меню", // Переконайтеся, що ця кнопка є в головному меню
+    block_date_time_future_impl:
+      "Функціонал Блокування дати/часу буде реалізовано.",
+    add_to_portfolio_future_impl:
+      "Функціонал Додавання до портфоліо буде реалізовано.",
+    block_client_future_impl:
+      "Функціонал Блокування клієнта буде реалізовано. Будь ласка, вкажіть ID користувача, якого потрібно заблокувати.", // Переклад для заглушки кнопки блокування
   },
   pl: {
     welcome: "Cześć! Jestem twoim nowym botem.",
@@ -126,6 +150,7 @@ const translations = {
     admin_menu_welcome: "Witaj w menu administratora!",
     view_all_records_btn: "📋 Zobacz wszystkie rezerwacje",
     block_date_time_btn: "🚫 Zablokuj Datę/Godzinę",
+    block_client_btn: "🚫 Zablokuj klienta",
     add_to_portfolio_btn: "➕ Dodaj do Portfolio",
     back_to_main_menu_btn: "⬅️ Powrót do menu głównego",
     access_denied: "Nie masz dostępu do tej funkcji.",
@@ -213,6 +238,29 @@ const translations = {
     admin_cancelled_service: "🔧 Usługa: %s",
     admin_cancelled_date: "📆 Data: %s",
     admin_cancelled_time: "⏰ Godzina: %s",
+    reminder_message_header: "🔔 Przypomnienie o Twojej wizycie!",
+    reminder_service: "🔧 Usługa: %s",
+    reminder_date: "📆 Zaplanowano: %s",
+    reminder_time: "⏰ Godzina: %s",
+    reminder_footer: "Czekamy na Ciebie!",
+    select_records_filter: "Wybierz, które rezerwacje chcesz zobaczyć:",
+    filter_today_btn: "🗓️ Na dziś",
+    filter_tomorrow_btn: "➡️ Na jutro",
+    filter_this_week_btn: "📅 Ten tydzień",
+    filter_this_month_btn: "📈 Ten miesiąc",
+    filter_all_records_btn: "🗂️ Wszystkie przyszłe",
+    filter_specific_date_btn: "🔎 Konkretna data", // Możliwe, dodamy później
+    back_to_records_filters_btn: "⬅️ Do filtrów",
+    records_list_header: "📈 Aktywne rezerwacje:",
+    no_records_found: "Nie znaleziono rezerwacji według wybranych kryteriów.",
+    admin_menu_btn: "Menu admina", // Upewnij się, że ten przycisk jest w głównym menu
+    block_date_time_future_impl:
+      "Funkcjonalność Blokowania daty/godziny zostanie zaimplementowana.",
+    add_to_portfolio_future_impl:
+      "Funkcjonalność Dodawania do portfolio zostanie zaimplementowana.",
+    block_client_future_impl:
+      "Funkcjonalność Blokowania klienta zostanie zaimplementowana. Proszę podać ID użytkownika do zablokowania.",
+    back_to_main_menu_btn: "⬅️ Powrót do menu admina",
   },
 };
 

@@ -12,7 +12,9 @@ const { setupTimeHandlers, bookedAppointments } = require("./handlers/time");
 const { setupProfileHandlers } = require("./handlers/profile");
 const {
   setupCancelAppointmentHandlers,
-} = require("./handlers/cancelAppointment"); // <-- ДОДАНО: Імпорт нового обробника
+} = require("./handlers/cancelAppointment");
+const { scheduleCleanup } = require("./utils/cleanupAppointments");
+const { setupViewRecordsHandlers } = require("./handlers/viewRecordsAdmin");
 
 const { getTranslation } = require("./translate");
 const { getMainMenuKeyboard } = require("./keyboards");
@@ -23,27 +25,39 @@ const ADMIN_IDS = process.env.ADMIN_IDS
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-bot.use(new LocalSession({ database: "data/users.json" }).middleware());
+// Зберігаємо екземпляр LocalSession у змінній
+const localSessionInstance = new LocalSession({ database: "data/users.json" });
+bot.use(localSessionInstance.middleware()); // Використовуємо його middleware
 
 setupStartHandlers(bot, ADMIN_IDS);
 setupNameHandlers(bot);
 setupPhoneHandlers(bot);
-setupAdminHandlers(bot, ADMIN_IDS);
+setupAdminHandlers(bot, ADMIN_IDS); // Цей обробник має бути перед viewRecordsAdmin, оскільки він обробляє вхід в адмін-меню
 setupServicesHandlers(bot);
 setupCalendarHandlers(bot);
-setupTimeHandlers(bot, ADMIN_IDS);
-setupProfileHandlers(bot);
-setupCancelAppointmentHandlers(bot, ADMIN_IDS); // <-- ДОДАНО: Виклик нового обробника
+setupTimeHandlers(bot, ADMIN_IDS, localSessionInstance);
+setupProfileHandlers(bot, localSessionInstance);
+setupCancelAppointmentHandlers(bot, ADMIN_IDS);
+setupViewRecordsHandlers(bot, ADMIN_IDS); // Цей обробник має бути після adminMenu, оскільки він обробляє кнопку "Переглянути всі записи" з адмін-меню
 
 bot.on("text", async (ctx) => {
-  console.log(
-    `Index.js - fallback text handler - current nextStep: ${ctx.session.nextStep}, text: "${ctx.message.text}"`
-  );
-  await ctx.reply(
-    getTranslation(ctx.session.lang || "ua", "help_message"),
-    getMainMenuKeyboard(ctx.session.lang || "ua", ctx.session.isAdmin)
-  );
+  // Цей обробник спрацьовує лише якщо попередні обробники не відловили повідомлення
+  // і якщо бот не знаходиться в якомусь специфічному стані (nextStep === null/undefined)
+  if (ctx.session.nextStep === null || ctx.session.nextStep === undefined) {
+    console.log(
+      `Index.js - fallback text handler - current nextStep: ${ctx.session.nextStep}, text: "${ctx.message.text}"`
+    );
+    await ctx.reply(
+      getTranslation(ctx.session.lang || "ua", "help_message"),
+      getMainMenuKeyboard(ctx.session.lang || "ua", ctx.session.isAdmin)
+    );
+  }
+  // Якщо nextStep не null/undefined, то очікується, що інший обробник має його відловити.
+  // Якщо ні, повідомлення просто ігнорується, що краще, ніж надсилати неправильну клавіатуру.
 });
+
+// Запускаємо планувальник очищення
+scheduleCleanup();
 
 bot.launch();
 
