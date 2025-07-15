@@ -1,28 +1,19 @@
 const { Markup } = require("telegraf");
-const { getTranslation } = require("../translate");
 
-function getMainMenuKeyboard(lang, isAdmin = false) {
-  const keyboard = [
-    [
-      Markup.button.text(getTranslation(lang, "book_appointment_btn")),
-      Markup.button.text(getTranslation(lang, "my_cabinet_btn")),
-    ],
-    [
-      Markup.button.text(
-        getTranslation(lang, "cancel_appointment_main_menu_btn")
-      ), // <-- ДОДАНО: Кнопка "Скасувати візит"
-    ],
-  ];
+function getMainMenuKeyboard(lang = "uk") {
+  const buttons = {
+    uk: ["📅 Запис", "❌ Скасувати запис", "👤 Мій профіль", "📸 Портфоліо"],
+    pl: ["📅 Rezerwacja", "❌ Anuluj", "👤 Mój profil", "📸 Portfolio"],
+  };
 
-  if (isAdmin) {
-    keyboard.push([
-      Markup.button.text(getTranslation(lang, "admin_panel_btn")),
-    ]);
-  }
+  const keyboard = buttons[lang] || buttons.uk;
 
-  return Markup.keyboard(keyboard).resize();
+  return Markup.keyboard([
+    [keyboard[0], keyboard[1]],
+    [keyboard[2], keyboard[3]],
+  ])
+    .resize()
+    .oneTime();
 }
 
-module.exports = {
-  getMainMenuKeyboard,
-};
+module.exports = { getMainMenuKeyboard };

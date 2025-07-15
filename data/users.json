@@ -1,20 +1,14 @@
 {
-  "sessions": [
-    {
-      "id": "1957983074:1957983074",
-      "data": {
-        "nextStep": null,
-        "lang": "ua",
-        "userName": "asdasd",
-        "userPhone": null
-      }
-    },
-    {
-      "id": "1044192531:1044192531",
-      "data": {
-        "nextStep": "admin_menu",
-        "lang": "ua"
-      }
-    }
-  ]
+  "1044192531": {
+    "language": "pl",
+    "first_name": "F",
+    "last_name": "A",
+    "phone": null
+  },
+  "1957983074": {
+    "language": "pl",
+    "first_name": "Ф",
+    "last_name": "А",
+    "phone": null
+  }
 }
