@@ -37,7 +37,6 @@ const handlePhoneNumber = async (ctx) => {
       saveUser(user);
 
       await ctx.reply(getTranslation("info_saved_thank_you", lang));
-      // ВИПРАВЛЕНО: Використовуємо getTranslation для "Оберіть дію:"
       await ctx.reply(
         getTranslation("choose_action", lang),
         getClientMainMenuKeyboard(lang)
@@ -48,7 +47,6 @@ const handlePhoneNumber = async (ctx) => {
       saveUser(user);
 
       await ctx.reply(getTranslation("info_saved_thank_you", lang));
-      // ВИПРАВЛЕНО: Використовуємо getTranslation для "Оберіть дію:"
       await ctx.reply(
         getTranslation("choose_action", lang),
         getClientMainMenuKeyboard(lang)
@@ -63,7 +61,6 @@ const handlePhoneNumber = async (ctx) => {
         saveUser(user);
 
         await ctx.reply(getTranslation("info_saved_thank_you", lang));
-        // ВИПРАВЛЕНО: Використовуємо getTranslation для "Оберіть дію:"
         await ctx.reply(
           getTranslation("choose_action", lang),
           getClientMainMenuKeyboard(lang)

@@ -4,8 +4,19 @@
     "lang": "ua",
     "is_admin": false,
     "state": null,
-    "first_name": "Maksym",
-    "last_name": "Yaropvets",
+    "first_name": "Ф",
+    "last_name": "А",
     "phone": "+380671302102"
+  },
+  "_schedule": {
+    "2025-07-17": {
+      "10:30": {
+        "status": "booked",
+        "userId": 1957983074,
+        "service": "👣 Педикюр",
+        "userName": "Ф А",
+        "userPhone": "+380671302102"
+      }
+    }
   }
 }
