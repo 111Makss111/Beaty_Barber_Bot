@@ -6,14 +6,11 @@ const {
 } = require("../data/data");
 const { getTranslation } = require("../data/translations");
 const { getTimeSlotsInlineKeyboard } = require("../keyboard/timeSlots");
-const { getCalendarInlineKeyboard } = require("../keyboard/calendar"); // Для повернення до календаря
+const { getCalendarInlineKeyboard } = require("../keyboard/calendar");
+const { getClientMainMenuKeyboard } = require("../keyboard/mainMenu");
 
 const { userStates } = require("./userPhone");
 
-/**
- * Показує користувачеві доступні часові слоти для обраної дати.
- * @param {Object} ctx - Об'єкт контексту Telegraf.
- */
 const showTimeSlots = async (ctx) => {
   const userId = ctx.from.id;
   const user = findUser(userId);
@@ -29,17 +26,13 @@ const showTimeSlots = async (ctx) => {
   userStates[userId] = { state: "waiting_for_time_selection", lang: lang };
   saveUser(user);
 
+  // Виправлено: Використовуємо choose_time_slot з плейсхолдером дати
   await ctx.reply(
-    getTranslation("choose_time", lang),
+    getTranslation("choose_time_slot", lang, { date: selectedDateString }),
     getTimeSlotsInlineKeyboard(selectedDateString, lang)
   );
 };
 
-/**
- * Обробляє callback-запити, пов'язані з вибором часу.
- * Включає вибір слоту та повернення до календаря.
- * @param {Object} ctx - Об'єкт контексту Telegraf (містить callbackQuery).
- */
 const handleTimeSlotCallback = async (ctx) => {
   const userId = ctx.from.id;
   const callbackData = ctx.callbackQuery.data;
@@ -61,25 +54,21 @@ const handleTimeSlotCallback = async (ctx) => {
 
   // Обробка повернення до календаря
   if (callbackData === "back_to_calendar_from_time") {
-    // Очищаємо current_date, так як повертаємося на крок назад
     user.current_date = null;
     saveUser(user);
 
-    // Встановлюємо стан користувача на очікування вибору дати
     userStates[userId].state = "waiting_for_date_selection";
     saveUser(user);
 
-    // Редагуємо попереднє повідомлення, щоб прибрати кнопки часу
     try {
-      await ctx.editMessageText(
-        getTranslation("choose_date", lang), // Змінюємо текст на "Оберіть дату:"
-        { reply_markup: { inline_keyboard: [] } }
-      );
+      await ctx.editMessageReplyMarkup({}); // Прибираємо інлайн-клавіатуру
     } catch (error) {
-      // Може виникнути, якщо повідомлення вже було видалено/змінено
+      console.error(
+        "Error editing message markup in handleTimeSlotCallback (back_to_calendar_from_time):",
+        error
+      );
     }
 
-    // Повертаємося до календаря, відображаючи обраний раніше місяць/рік, якщо можливо
     const now = new Date();
     const displayYear = user.current_date
       ? new Date(user.current_date).getFullYear()
@@ -96,10 +85,9 @@ const handleTimeSlotCallback = async (ctx) => {
 
   // Обробка вибору часового слоту
   if (callbackData.startsWith("time_")) {
-    const selectedTime = callbackData.split("_")[1]; // Наприклад, "09:00"
-    const selectedDateString = user.current_date; // Отримуємо дату з user
+    const selectedTime = callbackData.split("_")[1];
+    const selectedDateString = user.current_date;
 
-    // Перевірка, чи не був слот зайнятий/заблокований кимось іншим, поки користувач обирав
     const schedule = getSchedule();
     const daySchedule = schedule[selectedDateString] || {};
     if (
@@ -107,71 +95,62 @@ const handleTimeSlotCallback = async (ctx) => {
       (daySchedule[selectedTime].status === "booked" ||
         daySchedule[selectedTime].status === "blocked_admin")
     ) {
+      // Виправлено: Використовуємо переклад для повідомлення про недоступність слоту
       await ctx.reply(
-        lang === "ua"
-          ? "Цей час щойно став недоступним. Будь ласка, оберіть інший."
-          : "Ten czas właśnie stał się niedostępny. Proszę wybrać inny.",
-        getTimeSlotsInlineKeyboard(selectedDateString, lang) // Знову показуємо доступні слоти
+        getTranslation("slot_taken_while_confirming", lang),
+        getTimeSlotsInlineKeyboard(selectedDateString, lang)
       );
       return;
     }
 
-    // Зберігаємо обраний час
     user.current_time = selectedTime;
+    userStates[userId].state = "waiting_for_confirmation";
     saveUser(user);
 
-    // Оновлюємо глобальний розклад (_schedule)
-    if (!schedule[selectedDateString]) {
-      schedule[selectedDateString] = {};
+    try {
+      await ctx.editMessageReplyMarkup({}); // Прибираємо інлайн-клавіатуру
+    } catch (error) {
+      console.error(
+        "Error editing message markup in handleTimeSlotCallback (time_):",
+        error
+      );
     }
-    schedule[selectedDateString][selectedTime] = {
-      status: "booked", // Позначаємо як "заброньовано"
-      userId: userId,
-      service: user.current_service,
-      userName: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
-      userPhone: user.phone,
-    };
-    updateSchedule(schedule); // Зберігаємо оновлений розклад
 
-    // Очищаємо тимчасові дані вибору
-    delete user.current_service;
-    delete user.current_date;
-    delete user.current_time;
-    delete userStates[userId];
-    user.state = null; // Обнуляємо state у об'єкті користувача
-    saveUser(user);
+    // user.current_service тут повинен бути ключем (service_manicure, service_pedicure тощо)
+    const serviceName = getTranslation(user.current_service, lang);
 
-    // Редагуємо попереднє повідомлення та підтверджуємо запис
-    await ctx.editMessageText(
-      lang === "ua"
-        ? `✅ Чудово! Ви успішно записалися на **${
-            user.current_service || "послугу"
-          }** ` +
-            `на **${selectedDateString}** о **${selectedTime}**. \n\n` +
-            `Ваш запис: **${selectedDateString}**, **${selectedTime}**, **${
-              user.current_service || "послуга"
-            }**. \n\n` +
-            `Ми зв'яжемося з вами найближчим часом для підтвердження. Дякуємо!`
-        : `✅ Świetnie! Pomyślnie zarezerwowałeś/aś się na **${
-            user.current_service || "usługę"
-          }** ` +
-            `na dzień **${selectedDateString}** o godzinie **${selectedTime}**. \n\n` +
-            `Twoja rezerwacja: **${selectedDateString}**, **${selectedTime}**, **${
-              user.current_service || "usługa"
-            }**. \n\n` +
-            `Skontaktujemy się z Tobą wkrótce, aby potwierdzić. Dziękujemy!`,
-      { parse_mode: "Markdown", reply_markup: { inline_keyboard: [] } } // Прибираємо кнопки
-    );
-    // Можна також надіслати повідомлення з головним меню
     await ctx.reply(
-      getTranslation("choose_action", lang),
-      getClientMainMenuKeyboard(lang)
+      getTranslation("confirmation_message", lang, {
+        service: serviceName, // Передаємо перекладене ім'я послуги
+        date: selectedDateString,
+        time: selectedTime,
+      }),
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: getTranslation("button_confirm", lang),
+                callback_data: "confirm_booking",
+              },
+              {
+                text: getTranslation("button_cancel_booking", lang),
+                callback_data: "cancel_booking",
+              },
+            ],
+          ],
+        },
+      }
     );
     return;
   }
 
   if (callbackData === "ignore_slot") {
-    return; // Ігноруємо натискання на неактивні слоти
+    await ctx.answerCbQuery(getTranslation("slot_not_available", lang), {
+      show_alert: true,
+    });
+    return;
   }
 
   await ctx.reply(getTranslation("error_try_again", lang));
