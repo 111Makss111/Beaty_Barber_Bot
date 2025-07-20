@@ -1,3 +1,5 @@
+// handlers/serviceSelection.js
+
 const { findUser, saveUser } = require("../data/data");
 const { getTranslation } = require("../data/translations");
 const { getServiceMenuInlineKeyboard } = require("../keyboard/serviceMenu");
@@ -21,9 +23,8 @@ const showServiceMenu = async (ctx) => {
   };
   saveUser(user);
 
-  // Виправлено: Використовуємо choose_service для цього повідомлення
   await ctx.reply(
-    getTranslation("choose_service", user.lang), // Змінено з "choose_action"
+    getTranslation("choose_service", user.lang),
     getServiceMenuInlineKeyboard(user.lang)
   );
 };
@@ -41,81 +42,89 @@ const handleServiceSelection = async (ctx) => {
     !currentState ||
     currentState.state !== "waiting_for_service_selection"
   ) {
-    await ctx.reply(getTranslation("error_try_again", user ? user.lang : "ua"));
-    return;
-  }
-
-  const lang = user.lang;
-
-  if (callbackData === "back_to_main_menu") {
-    delete userStates[userId];
-    user.state = null;
-    saveUser(user);
-
-    try {
-      await ctx.editMessageReplyMarkup({}); // Просто прибираємо інлайн-клавіатуру
-    } catch (error) {
-      // Може бути помилка, якщо повідомлення вже відредаговано або надто старе
-      console.error(
-        "Error editing message markup in handleServiceSelection (back_to_main_menu):",
-        error
-      );
-    }
-
-    await ctx.reply(
-      getTranslation("choose_action", lang), // Тут залишаємо choose_action
-      getClientMainMenuKeyboard(lang)
-    );
+    await ctx.reply(getTranslation("error_try_again", user?.lang || "ua"));
     return;
   }
 
   if (callbackData.startsWith("service_")) {
-    const serviceKey = callbackData; // Зберігаємо повний ключ 'service_manicure'
-
-    // Зберігаємо ПОВНИЙ КЛЮЧ послуги в user.current_service
-    // Це дозволить використовувати його напряму з getTranslation
+    const serviceKey = callbackData;
     user.current_service = serviceKey;
     saveUser(user);
 
-    // Отримуємо перекладену назву для відображення клієнту
+    const lang = user.lang || "ua";
     const serviceNameForDisplay = getTranslation(serviceKey, lang);
 
+    const dataSavedMessage = getTranslation("data_saved", lang, {
+      name: user.first_name || "клієнт",
+      surname: user.last_name || "",
+    });
+    const proceedToDateMessage = getTranslation(
+      "service_selected_proceed_to_date",
+      lang,
+      {
+        service_name: serviceNameForDisplay,
+      }
+    );
+
+    // Комбінуємо повідомлення з новим рядком.
+    const fullMessageText = `${dataSavedMessage}\n${proceedToDateMessage}`;
+
+    // Додаємо дебаг лог для перевірки сформованого тексту та режиму парсингу
+    console.log(`[DEBUG] Сформований текст для відправки:`);
+    console.log(fullMessageText);
+    console.log(`[DEBUG] Parse Mode: Markdown`); // Логуємо поточний режим парсингу
+
     try {
-      // Виправлено: Використовуємо choose_time_slot для цього повідомлення
       await ctx.editMessageText(
-        `${getTranslation("data_saved", lang, {
-          first_name: user.first_name || "клієнт",
-        })} ` +
-          // Використовуємо choose_time_slot, оскільки наступний крок - вибір дати/часу
-          `${getTranslation("choose_time_slot", lang, { date: "" })
-            .replace(" на ", "")
-            .replace(":", "")}\n` + // Прибираємо "на {date}:" для цього конкретного випадку
-          `Ви обрали послугу: **${serviceNameForDisplay}**. Тепер оберіть дату.`,
-        { parse_mode: "Markdown", reply_markup: { inline_keyboard: [] } }
+        fullMessageText,
+        { parse_mode: "Markdown" } // Використовуємо Markdown
       );
     } catch (error) {
       console.error(
         "Error editing message text in handleServiceSelection:",
-        error
+        error.message
       );
-      // Відправляємо нове повідомлення, якщо не вдалося відредагувати
-      await ctx.reply(
-        `${getTranslation("data_saved", lang, {
-          first_name: user.first_name || "клієнт",
-        })} ` +
-          `${getTranslation("choose_time_slot", lang, { date: "" })
-            .replace(" на ", "")
-            .replace(":", "")}\n` +
-          `Ви обрали послугу: **${serviceNameForDisplay}**. Тепер оберіть дату.`,
-        { parse_mode: "Markdown" }
-      );
+      if (error.on && error.on.payload) {
+        console.error(
+          "[DEBUG] Payload, що викликав помилку:",
+          error.on.payload
+        );
+      }
+      // Якщо редагування не вдалося, відправляємо нове повідомлення
+      await ctx.reply(fullMessageText, {
+        parse_mode: "Markdown",
+      });
     }
 
     await showCalendar(ctx);
     return;
   }
 
-  await ctx.reply(getTranslation("error_try_again", lang));
+  if (callbackData === "back_to_main_menu") {
+    user.state = null;
+    user.current_service = null;
+    saveUser(user);
+
+    // Спроба видалити інлайн-клавіатуру з поточного повідомлення
+    try {
+      await ctx.editMessageReplyMarkup({});
+    } catch (error) {
+      console.error(
+        "Помилка видалення інлайн-клавіатури при поверненні в головне меню:",
+        error.message
+      );
+      // Якщо не вдалося видалити (наприклад, повідомлення вже змінено або видалено), продовжуємо.
+    }
+
+    // Відправляємо нове повідомлення з привітанням і звичайною клавіатурою головного меню
+    await ctx.reply(
+      getTranslation("welcome_back", user.lang), // Використовуємо існуючий ключ "welcome_back"
+      getClientMainMenuKeyboard(user.lang)
+    );
+    return;
+  }
+
+  await ctx.reply(getTranslation("error_unknown_command", user.lang || "ua"));
 };
 
 module.exports = {

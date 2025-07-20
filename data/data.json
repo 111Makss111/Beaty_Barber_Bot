@@ -1,47 +1,58 @@
 {
   "users": [
+    {},
     {
       "id": 1957983074,
-      "lang": "ua",
-      "is_admin": true,
-      "state": null
+      "lang": "pl",
+      "is_admin": false,
+      "state": null,
+      "first_name": "Maks",
+      "last_name": "Ysropovets",
+      "phone": "+380671302102",
+      "current_service": null,
+      "current_date": null,
+      "current_time": null
     }
   ],
-  "schedule": {},
-  "blockedDates": [],
-  "portfolioPhotos": [],
-  "_schedule": {
-    "2025-07-18": {
-      "09:00": {
-        "status": "cancelled",
-        "userId": 1044192531,
-        "service": "service_pedicure",
-        "userName": "Maks",
-        "userPhone": "Не вказано"
+  "schedule": {
+    "2025-07-20": {
+      "15:30": {
+        "status": "blocked_admin",
+        "timestamp": "2025-07-20T12:56:09.122Z",
+        "blockedBy": 1957983074
       },
-      "13:30": {
-        "status": "cancelled",
-        "userId": 1044192531,
-        "service": "service_manicure",
-        "userName": "Gd",
-        "userPhone": "Не вказано"
+      "16:00": {
+        "status": "blocked_admin",
+        "timestamp": "2025-07-20T12:56:09.122Z",
+        "blockedBy": 1957983074
       },
-      "15:00": {
-        "status": "booked",
-        "userId": 1044192531,
-        "service": "service_manicure",
-        "userName": "Vdh",
-        "userPhone": "Не вказано"
-      }
-    },
-    "2025-07-25": {
-      "15:00": {
-        "status": "cancelled",
-        "userId": 1044192531,
-        "service": "service_manicure",
-        "userName": "Maks",
-        "userPhone": "Не вказано"
+      "16:30": {
+        "status": "blocked_admin",
+        "timestamp": "2025-07-20T12:56:09.122Z",
+        "blockedBy": 1957983074
+      },
+      "17:00": {
+        "status": "blocked_admin",
+        "timestamp": "2025-07-20T12:56:09.122Z",
+        "blockedBy": 1957983074
+      },
+      "17:30": {
+        "status": "blocked_admin",
+        "timestamp": "2025-07-20T12:56:09.122Z",
+        "blockedBy": 1957983074
+      },
+      "18:00": {
+        "status": "blocked_admin",
+        "timestamp": "2025-07-20T12:56:09.122Z",
+        "blockedBy": 1957983074
       }
     }
-  }
+  },
+  "blockedDates": [],
+  "portfolioPhotos": [
+    {
+      "fileId": "AgACAgQAAxkBAAIf62h82YY5JBb_-JRCvnc0KhTON53jAAK4yTEbqOvoUxJFJ7HCorJRAQADAgADeQADNgQ",
+      "timestamp": "2025-07-20T11:55:49.207Z"
+    }
+  ]
 }

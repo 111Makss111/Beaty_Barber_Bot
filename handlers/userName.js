@@ -2,7 +2,7 @@ const { Markup } = require("telegraf");
 const { findUser, saveUser } = require("../data/data");
 const { getAdminMenuKeyboard } = require("../admin/keyboard/adminMenu");
 const { getTranslation } = require("../data/translations");
-const { requestPhoneNumber, userStates } = require("./userPhone");
+const { requestPhoneNumber, userStates } = require("./userPhone"); // Зверніть увагу: якщо цей файл називається userPhone.js, то userStates має бути визначено тут або імпортовано з іншого місця. Я залишаю імпорт як у вашому прикладі.
 
 const ADMIN_IDS = process.env.ADMIN_IDS
   ? process.env.ADMIN_IDS.split(",").map((id) => parseInt(id.trim()))
@@ -63,7 +63,11 @@ const handleUserNameAndSurname = async (ctx) => {
     saveUser(user);
 
     await ctx.reply(
-      getTranslation("data_saved", user.lang, { first_name: user.first_name })
+      // ЗМІНЕНО: тепер передаємо 'name' та 'surname'
+      getTranslation("data_saved", user.lang, {
+        name: user.first_name || "клієнт",
+        surname: user.last_name || "",
+      })
     );
     await requestPhoneNumber(ctx, user.lang);
   }

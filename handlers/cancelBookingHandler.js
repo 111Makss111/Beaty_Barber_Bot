@@ -2,7 +2,7 @@ const {
   findUser,
   saveUser,
   getSchedule,
-  updateSchedule,
+  setSchedule, // ВИПРАВЛЕНО: Змінено updateSchedule на setSchedule
 } = require("../data/data");
 const { getTranslation } = require("../data/translations");
 const { getClientMainMenuKeyboard } = require("../keyboard/mainMenu");
@@ -243,7 +243,7 @@ const handleCancelBookingCallback = async (ctx) => {
       ) {
         schedule[bookingToCancel.date][bookingToCancel.time].status =
           "cancelled";
-        updateSchedule(schedule);
+        setSchedule(schedule); // ВИПРАВЛЕНО: Використовуємо setSchedule
 
         await ctx.reply(
           getTranslation("booking_successfully_cancelled", lang),

@@ -22,16 +22,17 @@ const showClientProfile = async (ctx) => {
   let profileText = `${getTranslation(
     "profile_client_header",
     lang
-  )}\n${getTranslation("profile_booking_separator", lang)}\n`; // Заголовок профілю
+  )}\n${getTranslation("profile_booking_separator", lang)}\n`;
 
   profileText += `${getTranslation("profile_your_info", lang, {
-    first_name: user.first_name || "",
-    last_name: user.last_name || "",
+    first_name: user.first_name || ctx.from.first_name || "",
+    last_name: user.last_name || ctx.from.last_name || "",
   })}\n`;
 
-  if (user.phone_number) {
+  // ВИПРАВЛЕНО: Змінено user.phone_number на user.phone
+  if (user.phone) {
     profileText += `${getTranslation("profile_phone", lang, {
-      phone: user.phone_number,
+      phone: user.phone,
     })}\n`;
   } else {
     profileText += `${getTranslation("profile_no_phone_provided", lang)}\n`;
@@ -68,7 +69,6 @@ const showClientProfile = async (ctx) => {
           date: dateString,
           time: time,
           service: booking.service,
-          // location: booking.location, // Якщо у тебе є локація в записах
         });
       }
     }
@@ -87,9 +87,6 @@ const showClientProfile = async (ctx) => {
       profileText += `${getTranslation("profile_service", lang, {
         service: serviceName,
       })}\n`;
-      // if (booking.location) { // Якщо у тебе є локація в записах
-      //     profileText += `${getTranslation("profile_location", lang, { location: booking.location })}\n`;
-      // }
       profileText += `${getTranslation("profile_date", lang, {
         date: booking.date,
       })}\n`;
@@ -97,7 +94,7 @@ const showClientProfile = async (ctx) => {
         time: booking.time,
       })}\n`;
     }
-    profileText += `${getTranslation("profile_booking_separator", lang)}\n`; // Завершальна лінія після записів
+    profileText += `${getTranslation("profile_booking_separator", lang)}\n`;
   } else {
     profileText += `${getTranslation("profile_no_bookings", lang)}\n`;
     profileText += `${getTranslation("profile_booking_separator", lang)}\n`;

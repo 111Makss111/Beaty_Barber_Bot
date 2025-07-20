@@ -2,8 +2,6 @@ const { Markup } = require("telegraf");
 const { getTranslation } = require("../data/translations");
 const { getSchedule } = require("../data/data");
 
-// Фіксований графік роботи (години початку послуги)
-// У форматі "ГГ:ХХ"
 const AVAILABLE_TIMES = [
   "09:00",
   "10:30",
@@ -14,16 +12,10 @@ const AVAILABLE_TIMES = [
   "18:00",
 ];
 
-/**
- * Генерує інлайн-клавіатуру з доступними часовими слотами для обраної дати.
- * @param {string} dateString - Обрана дата у форматі "РРРР-ММ-ДД".
- * @param {string} lang - Мовний код ('ua' або 'pl').
- * @returns {Object} Telegraf InlineKeyboardMarkup.
- */
 const getTimeSlotsInlineKeyboard = (dateString, lang) => {
   const timeSlotsKeyboard = [];
   const schedule = getSchedule();
-  const daySchedule = schedule[dateString] || {}; // Розклад на конкретний день
+  const daySchedule = schedule[dateString] || {};
 
   const now = new Date();
   const todayDateString = `${now.getFullYear()}-${(now.getMonth() + 1)
@@ -32,42 +24,44 @@ const getTimeSlotsInlineKeyboard = (dateString, lang) => {
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
 
-  let row = [];
-  AVAILABLE_TIMES.forEach((time) => {
-    const [hourStr, minuteStr] = time.split(":");
-    const slotHour = parseInt(hourStr, 10);
-    const slotMinute = parseInt(minuteStr, 10);
+  const sortedAvailableTimes = [...new Set(AVAILABLE_TIMES)].sort((a, b) => {
+    const [hA, mA] = a.split(":").map(Number);
+    const [hB, mB] = b.split(":").map(Number);
+    if (hA === hB) return mA - mB;
+    return hA - hB;
+  });
 
+  let row = [];
+  sortedAvailableTimes.forEach((time) => {
+    const [slotHour, slotMinute] = time.split(":").map(Number);
     let buttonText = time;
     let callbackData = `time_${time}`;
     let isDisabled = false;
 
-    // Перевірка, чи слот вже зайнятий або заблокований
     if (
       daySchedule[time] &&
       (daySchedule[time].status === "booked" ||
         daySchedule[time].status === "blocked_admin")
     ) {
       isDisabled = true;
-      buttonText += " 🚫"; // Маркуємо зайняті/заблоковані слоти
-      callbackData = "ignore_slot"; // Неактивна кнопка
+      buttonText += " 🚫";
+      callbackData = "ignore_slot";
     }
 
-    // Перевірка на минулий час, якщо це сьогоднішня дата
     if (dateString === todayDateString) {
+      // Порівняння з поточним часом для відображення минулих слотів
       if (
         slotHour < currentHour ||
         (slotHour === currentHour && slotMinute <= currentMinute)
       ) {
         isDisabled = true;
-        buttonText = "✖️"; // Маркуємо минулий час
+        buttonText = "✖️";
         callbackData = "ignore_slot";
       }
     }
 
     row.push(Markup.button.callback(buttonText, callbackData));
 
-    // Розбиваємо на ряди по 3 кнопки
     if (row.length === 3) {
       timeSlotsKeyboard.push(row);
       row = [];
@@ -79,18 +73,15 @@ const getTimeSlotsInlineKeyboard = (dateString, lang) => {
     timeSlotsKeyboard.push(row);
   }
 
-  // Кнопка "Повернутись до календаря"
+  // Додаємо кнопку "Повернутись до календаря"
   timeSlotsKeyboard.push([
     Markup.button.callback(
-      getTranslation("button_back_to_calendar", lang),
-      "back_to_calendar_from_time"
+      getTranslation("button_back_to_calendar", lang), // Використовуємо переклад для кнопки
+      "back_to_calendar_from_time" // Callback-дані для повернення
     ),
   ]);
 
   return Markup.inlineKeyboard(timeSlotsKeyboard);
 };
 
-module.exports = {
-  getTimeSlotsInlineKeyboard,
-  AVAILABLE_TIMES, // Можливо, знадобиться для інших файлів
-};
+module.exports = { AVAILABLE_TIMES, getTimeSlotsInlineKeyboard };

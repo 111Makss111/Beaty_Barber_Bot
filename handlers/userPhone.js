@@ -1,3 +1,5 @@
+// handlers/userPhone.js
+
 const { findUser, saveUser } = require("../data/data");
 const { getTranslation } = require("../data/translations");
 const { Markup } = require("telegraf");
@@ -32,6 +34,7 @@ const handlePhoneNumber = async (ctx) => {
     const lang = currentState.lang;
 
     if (ctx.message.contact) {
+      // Якщо номер прийшов через кнопку Telegram, він вже має правильний формат (з +)
       user.phone = ctx.message.contact.phone_number;
       delete userStates[userId];
       saveUser(user);
@@ -52,11 +55,24 @@ const handlePhoneNumber = async (ctx) => {
         getClientMainMenuKeyboard(lang)
       );
     } else {
-      const phoneRegex = /^\d{9,12}$/;
-      const inputPhone = ctx.message.text.replace(/[^0-9]/g, "");
+      // Обробка ручного введення номера
+      const inputPhone = ctx.message.text.replace(/[^0-9+]/g, ""); // Дозволяємо також '+' на початку
+
+      // Перевірка, чи номер починається з '+'
+      const startsWithPlus = inputPhone.startsWith("+");
+
+      // Регулярний вираз для перевірки номера: 9-12 цифр, можливо з '+' на початку
+      // Якщо починається з '+', то після нього ще 9-12 цифр. Якщо без '+', то просто 9-12 цифр.
+      const phoneRegex = startsWithPlus ? /^\+\d{9,12}$/ : /^\d{9,12}$/;
 
       if (phoneRegex.test(inputPhone)) {
-        user.phone = inputPhone;
+        // Якщо номер не починається з '+' і має 9-12 цифр, додаємо '+48'
+        if (!startsWithPlus) {
+          user.phone = `+48${inputPhone}`; // ВИПРАВЛЕНО: Додаємо +48
+        } else {
+          user.phone = inputPhone; // Якщо вже є '+', зберігаємо як є
+        }
+
         delete userStates[userId];
         saveUser(user);
 
@@ -70,8 +86,8 @@ const handlePhoneNumber = async (ctx) => {
           getTranslation("request_phone", lang) +
             "\n\n" +
             (lang === "ua"
-              ? "Будь ласка, введіть коректний номер (тільки цифри)."
-              : "Proszę wprowadzić poprawny numer (tylko cyfry).")
+              ? "Будь ласка, введіть коректний номер (тільки цифри, або з '+' на початку, наприклад, +380XXXXXXXXX)."
+              : "Proszę wprowadzić poprawny numer (tylko cyfry, lub z '+' na początku, np. +48XXXXXXXXX).")
         );
       }
     }

@@ -1,8 +1,8 @@
-// Приклад: index.js
+// index.js
 
 require("dotenv").config();
 const { Telegraf } = require("telegraf");
-const cron = require("node-cron");
+const cron = require("node-cron"); // Повертаємо імпорт cron, оскільки ви просили логування в index.js
 
 const startCommand = require("./handlers/start");
 const {
@@ -33,24 +33,30 @@ const {
 const { getTranslation } = require("./data/translations");
 const { findUser, saveUser } = require("./data/data");
 const { getAdminMenuKeyboard } = require("./admin/keyboard/adminMenu");
+const { getClientMainMenuKeyboard } = require("./keyboard/mainMenu");
 const {
   handleAdminMenuChoice,
   handleAdminCalendarCallback,
 } = require("./admin/handlers/adminHandler");
-const { cleanupBlockedDates, cleanupPastBookings } = require("./utils/cleanup");
+
 const {
   handleAdminTimeSlotCallback,
 } = require("./admin/handlers/adminTimeSlotHandler");
 const {
-  viewAllRecords,
+  showRecordsPeriodSelection,
   handleAdminRecordsCallback,
 } = require("./admin/handlers/adminViewRecordsHandler");
 const {
-  // <-- ДОДАНО: Імпорт обробників для портфоліо
   showPortfolioMenu,
   handlePortfolioCallback,
   handlePortfolioPhoto,
 } = require("./admin/handlers/adminPortfolioHandler");
+const {
+  showClientPortfolio,
+  handleClientPortfolioCallback,
+} = require("./handlers/clientPortfolioHandler");
+const { initCleanupScheduler } = require("./utils/cleanupScheduler");
+const { initNotifications } = require("./utils/notifications");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -63,18 +69,15 @@ bot.on("text", async (ctx) => {
   const currentState = userStates[userId] ? userStates[userId].state : null;
   const text = ctx.message.text;
 
-  // Логіка для адміністраторів (обробка кнопок головного адмін-меню)
   if (user && user.is_admin) {
     if (text === getTranslation("admin_menu_view_records", lang)) {
-      await viewAllRecords(ctx);
+      await showRecordsPeriodSelection(ctx);
       return;
     }
     if (text === getTranslation("admin_menu_add_portfolio", lang)) {
-      // <-- ОБРОБКА КНОПКИ "ДОДАТИ ДО ПОРТФОЛІО"
       await showPortfolioMenu(ctx);
       return;
     }
-    // Інші кнопки адмін-меню обробляються через handleAdminMenuChoice
     if (
       text === getTranslation("admin_menu_block_date", lang) ||
       text === getTranslation("admin_menu_block_hours", lang) ||
@@ -85,7 +88,6 @@ bot.on("text", async (ctx) => {
     }
   }
 
-  // Логіка для звичайних користувачів та загальні команди
   if (text === getTranslation("client_menu_appointment", lang)) {
     await showServiceMenu(ctx);
     return;
@@ -101,7 +103,11 @@ bot.on("text", async (ctx) => {
     return;
   }
 
-  // Обробка вибору послуги за текстом
+  if (text === getTranslation("client_menu_portfolio", lang)) {
+    await showClientPortfolio(ctx);
+    return;
+  }
+
   const serviceNames = [
     getTranslation("service_manicure", lang),
     getTranslation("service_pedicure", lang),
@@ -120,18 +126,14 @@ bot.on("text", async (ctx) => {
     return;
   }
 
-  // Обробка введеного імені/телефону/фото для портфоліо
   if (currentState === "waiting_for_name") {
     await handleUserNameAndSurname(ctx);
   } else if (currentState === "waiting_for_phone") {
     await handlePhoneNumber(ctx);
   }
-  // Немає потреби обробляти фото тут, бо є окремий bot.on('photo')
 });
 
-// Обробка фотографій, надісланих користувачами
 bot.on("photo", async (ctx) => {
-  // <-- ДОДАНО: Обробка отриманих фотографій
   const userId = ctx.from.id;
   const user = findUser(userId);
   const currentState = userStates[userId] ? userStates[userId].state : null;
@@ -144,9 +146,9 @@ bot.on("photo", async (ctx) => {
     await handlePortfolioPhoto(ctx);
     return;
   }
-  // Якщо фото не для портфоліо адміна, можна проігнорувати або відповісти
-  // await ctx.reply(getTranslation("error_unknown_command", user ? user.lang : "ua"));
 });
+
+bot.on("contact", handlePhoneNumber);
 
 bot.on("callback_query", async (ctx) => {
   const userId = ctx.from.id;
@@ -154,51 +156,54 @@ bot.on("callback_query", async (ctx) => {
   const currentState = userStates[userId] ? userStates[userId].state : null;
   const callbackData = ctx.callbackQuery.data;
 
-  // Обробка вибору мови (завжди перший пріоритет)
+  await ctx.answerCbQuery();
+
+  if (!user) {
+    await ctx.reply(getTranslation("error_try_again", "ua"));
+    return;
+  }
+
+  const lang = user.lang;
+
   if (callbackData === "lang_ua" || callbackData === "lang_pl") {
     await processLanguageSelection(ctx, callbackData.split("_")[1]);
     return;
   }
 
-  // Обробка callback-ів для АДМІНА - Повернення з перегляду записів
   if (
-    user &&
     user.is_admin &&
-    callbackData === "back_to_admin_menu_from_records"
+    (callbackData.startsWith("admin_records_period_") ||
+      callbackData === "admin_back_to_records_selection" ||
+      callbackData === "back_to_admin_menu_from_records" ||
+      callbackData === "back_to_admin_menu_from_records_selection")
   ) {
     await handleAdminRecordsCallback(ctx);
     return;
   }
 
-  // Обробка callback-ів для АДМІНА - ПОРТФОЛІО
-  if (user && user.is_admin && callbackData.startsWith("admin_portfolio_")) {
-    // <-- ОБРОБКА ВСІХ CALLBACK-ІВ ПОРТФОЛІО
+  if (
+    user.is_admin &&
+    (callbackData.startsWith("admin_portfolio_") ||
+      callbackData === "back_to_admin_menu_from_portfolio")
+  ) {
     await handlePortfolioCallback(ctx);
     return;
   }
+
   if (
-    user &&
-    user.is_admin &&
-    callbackData === "back_to_admin_menu_from_portfolio"
+    callbackData.startsWith("client_portfolio_") ||
+    callbackData === "back_to_main_menu_from_client_portfolio"
   ) {
-    // <-- ОБРОБКА ПОВЕРНЕННЯ З ПОРТФОЛІО
-    await handlePortfolioCallback(ctx); // Викликаємо той самий обробник, він визначить дію
+    await handleClientPortfolioCallback(ctx);
     return;
   }
 
-  // Обробка callback-ів для АДМІНА - БЛОКУВАННЯ ГОДИН
-  if (
-    user &&
-    user.is_admin &&
-    currentState === "admin_waiting_for_hour_to_block"
-  ) {
+  if (user.is_admin && currentState === "admin_waiting_for_hour_to_block") {
     await handleAdminTimeSlotCallback(ctx);
     return;
   }
 
-  // Обробка callback-ів для АДМІНА - КАЛЕНДАР (блокування дат або вибір дати для годин)
   if (
-    user &&
     user.is_admin &&
     (callbackData.startsWith("cal_admin_") ||
       callbackData.startsWith("admin_date_") ||
@@ -215,9 +220,6 @@ bot.on("callback_query", async (ctx) => {
     }
   }
 
-  // Логіка для звичайних користувачів
-
-  // Обробка повернення до головного меню з профілю
   if (callbackData === "back_to_main_menu_from_profile") {
     await handleProfileCallback(ctx);
     return;
@@ -256,7 +258,7 @@ bot.on("callback_query", async (ctx) => {
     callbackData === "confirm_booking" ||
     callbackData === "cancel_booking"
   ) {
-    await handleFinalBookingCallback(ctx);
+    await handleFinalBookingCallback(ctx, bot);
     return;
   }
 
@@ -274,40 +276,39 @@ bot.on("callback_query", async (ctx) => {
   }
 });
 
-bot.on("contact", handlePhoneNumber);
+console.log("Спроба ініціалізації bot.launch()...");
+bot.launch(); // Запускаємо бота
 
-bot.launch();
-console.log("Бот запущено!");
+// Тепер ці виклики виконаються одразу після запуску бота
+console.log("Бот успішно запущено! Готовий до роботи.");
+console.log("------------------------------------------");
 
-// --- Налаштування cron-завдань ---
-
-// Запуск при старті для першого очищення
-cleanupBlockedDates();
-cleanupPastBookings();
-
-// Щоденне очищення заблокованих дат (наприклад, о 03:00 ночі за часовим поясом Europe/Warsaw)
+// Запускаємо крон-завдання для періодичного логування активності бота
 cron.schedule(
-  "0 3 * * *",
+  "* * * * *", // Кожну хвилину
   () => {
-    console.log("Запускаю щоденне очищення заблокованих дат...");
-    cleanupBlockedDates();
+    const currentTime = new Date().toLocaleTimeString("uk-UA", {
+      timeZone: "Europe/Warsaw",
+    });
+    console.log(`[${currentTime}] БОТ ЗАПУЩЕНО. Працює коректно.`);
   },
   {
-    timezone: "Europe/Warsaw",
+    timezone: "Europe/Warsaw", // Встановлюємо часовий пояс для крон-завдання
   }
 );
-
-// Щогодинне очищення минулих записів клієнтів (наприклад, кожної години на 00 хвилині за часовим поясом Europe/Warsaw)
-cron.schedule(
-  "0 * * * *",
-  () => {
-    console.log("Запускаю щогодинне очищення минулих записів клієнтів...");
-    cleanupPastBookings();
-  },
-  {
-    timezone: "Europe/Warsaw",
-  }
+console.log(
+  "Періодичне логування активності бота заплановано (кожну хвилину)."
 );
 
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
+initCleanupScheduler();
+initNotifications(bot);
+
+// Реєструємо обробники для коректного завершення роботи бота при отриманні сигналів SIGINT/SIGTERM
+process.once("SIGINT", () => {
+  console.log("Отримано SIGINT. Зупинка бота...");
+  bot.stop("SIGINT");
+});
+process.once("SIGTERM", () => {
+  console.log("Отримано SIGTERM. Зупинка бота...");
+  bot.stop("SIGTERM");
+});

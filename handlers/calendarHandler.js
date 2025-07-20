@@ -144,8 +144,9 @@ const handleCalendarCallback = async (ctx) => {
     try {
       await ctx.editMessageText(
         `${getTranslation("data_saved", lang, {
-          first_name: user.first_name || "клієнт",
-        })}. ` +
+          name: user.first_name || "клієнт", // ЗМІНЕНО: передаємо 'name'
+          surname: user.last_name || "", // ЗМІНЕНО: додаємо 'surname'
+        })} ` + // ЗМІНЕНО: прибрано зайву крапку після 'data_saved'
           `Ви обрали дату: **${selectedDateString}**. Тепер оберіть час.`,
         { parse_mode: "Markdown", reply_markup: { inline_keyboard: [] } }
       );
@@ -154,8 +155,9 @@ const handleCalendarCallback = async (ctx) => {
       // Якщо не вдалося відредагувати, відправляємо нове повідомлення
       await ctx.reply(
         `${getTranslation("data_saved", lang, {
-          first_name: user.first_name || "клієнт",
-        })}. ` +
+          name: user.first_name || "клієнт", // ЗМІНЕНО: передаємо 'name'
+          surname: user.last_name || "", // ЗМІНЕНО: додаємо 'surname'
+        })} ` + // ЗМІНЕНО: прибрано зайву крапку після 'data_saved'
           `Ви обрали дату: **${selectedDateString}**. Тепер оберіть час.`,
         { parse_mode: "Markdown", reply_markup: { inline_keyboard: [] } }
       );

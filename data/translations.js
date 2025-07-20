@@ -43,10 +43,10 @@ const translations = {
     request_name:
       "📝 Дякуємо! Будь ласка, введіть ваше Ім'я та Прізвище (наприклад: Іван Петренко):",
     request_phone:
-      "📞 Впишіть свій номер телефону (без +38) або скористайтесь кнопками знизу:",
+      "📞 Впишіть свій номер телефону (без +48) або скористайтесь кнопками знизу:",
     phone_button_telegram: "📲 Мій номер з Telegram",
     phone_button_skip: "➡️ Пропустити",
-    data_saved: "✅ Дякую, {first_name}! Ваші дані збережено.",
+    data_saved: "✅ Дякую, {name} {surname}! Ваші дані збережено.",
     info_saved_thank_you: "🎉 Дякуємо за надану інформацію!",
 
     // Меню клієнта
@@ -153,6 +153,32 @@ const translations = {
     admin_portfolio_no_photo_received:
       "❌ Будь ласка, надішліть саме фотографію.",
     admin_portfolio_photo_caption: "Фото {current} з {total}",
+    client_menu_portfolio: "📸 Портфоліо",
+    client_portfolio_no_photos:
+      "🖼️ Портфоліо поки що порожнє. Зачекайте, будь ласка, доки майстер додасть роботи.",
+    client_portfolio_photo_caption: "Фото {current} з {total}",
+    client_portfolio_back_button: "↩️ Назад до меню",
+    image_load_error:
+      "❌ Не вдалося завантажити зображення. Будь ласка, спробуйте пізніше.",
+    access_denied: "❌ Доступ заборонено.",
+    welcome_back: "👋 Ласкаво просимо назад!",
+    admin_select_records_period:
+      "Будь ласка, оберіть період для перегляду записів:",
+    records_today: "Сьогодні",
+    records_tomorrow: "Завтра",
+    records_week: "На тиждень",
+    records_month: "На місяць",
+    records_all_time: "Усі майбутні",
+    button_back_to_records_selection: "← До вибору періоду",
+    admin_records_date: "Записи на {date}",
+    admin_record_client_name: "Клієнт: {client_name}",
+    admin_record_client_phone: "Телефон: {client_phone}",
+    admin_no_active_records: "На обраний період активних записів немає.",
+    choose_time_slot_prompt: "⏰ Виберіть зручну годину на {date}:",
+    service_selected_proceed_to_date:
+      "Ви обрали послугу: **{service_name}**. Тепер оберіть дату.", // ВИПРАВЛЕНО: Екранована крапка
+    notification_reminder:
+      "👋 Привіт, {name} {surname}! \nНагадуємо, що у тебе наближається запис: \n\n📅 Дата: *{date}*\n⏰ Година: *{time}*\n💅 Послуга: *{service}*\n\nБудь ласка, будь пунктуальним! Чекаємо на тебе!",
   },
   pl: {
     // Загальні повідомлення
@@ -205,7 +231,7 @@ const translations = {
       "📞 Wprowadź swój numer telefonu (bez +48) lub skorzystaj z przycisków poniżej:",
     phone_button_telegram: "📲 Mój numer z Telegrama",
     phone_button_skip: "➡️ Pomiń",
-    data_saved: "✅ Dziękuję, {first_name}! Twoje dane zostały zapisane.",
+    data_saved: "✅ Dziękuję, {name} {surname}! Twoje dane zostały zapisane.",
     info_saved_thank_you: "🎉 Dziękuję za podane informacje!",
 
     // Меню клієнта
@@ -314,6 +340,31 @@ const translations = {
       "✅ Zdjęcie zostało pomyślnie usunięte z portfolio!",
     admin_portfolio_no_photo_received: "❌ Proszę wysłać tylko zdjęcie.",
     admin_portfolio_photo_caption: "Zdjęcie {current} z {total}",
+    client_menu_portfolio: "📸 Portfolio",
+    client_portfolio_no_photos:
+      "🖼️ Portfolio jest obecnie puste. Poczekaj, aż stylista doda swoje prace.",
+    client_portfolio_photo_caption: "Zdjęcie {current} z {total}",
+    client_portfolio_back_button: "↩️ Powrót do menu",
+    image_load_error: "❌ Nie udało się załadować obrazu. Spróbuj później.",
+    access_denied: "❌ Dostęp zabroniony.",
+    welcome_back: "👋 Witamy z powrotem!",
+    admin_select_records_period:
+      "Proszę wybrać okres do przeglądania rezerwacji:",
+    records_today: "Dziś",
+    records_tomorrow: "Jutro",
+    records_week: "Na tydzień",
+    records_month: "Na miesiąc",
+    records_all_time: "Wszystkie przyszłe",
+    button_back_to_records_selection: "← Do wyboru okresu",
+    admin_records_date: "Rezerwacje na {date}",
+    admin_record_client_name: "Klient: {client_name}",
+    admin_record_client_phone: "Telefon: {client_phone}",
+    admin_no_active_records: "Brak aktywnych rezerwacji w wybranym okresie.",
+    choose_time_slot_prompt: "⏰ Wybierz dogodną godzinę na {date}:",
+    service_selected_proceed_to_date:
+      "Wybrałeś usługę: **{service_name}**. Teraz wybierz datę.", // ВИПРАВЛЕНО: Екранована крапка
+    notification_reminder:
+      "👋 Cześć, {name} {surname}! \nPamiętaj, że masz nadchodzącą rezerwację: \n\n📅 Data: *{date}*\n⏰ Godzina: *{time}*\n💅 Usługa: *{service}*\n\nProsimy o punktualność! Czekamy na Ciebie!",
   },
 };
 
@@ -358,4 +409,5 @@ const getTranslation = (key, lang, placeholders = {}) => {
 
 module.exports = {
   getTranslation,
+  translations, // Експортуємо translations для можливості доступу
 };

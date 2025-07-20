@@ -1,9 +1,10 @@
+// data/data.js
+
 const fs = require("fs");
 const path = require("path");
 
-const DATA_FILE = path.join(__dirname, "data.json"); // Шлях до файлу даних
+const DATA_FILE = path.join(__dirname, "data.json");
 
-// Дефолтна структура даних. Важливо, щоб `users` був масивом.
 const defaultData = {
   users: [],
   schedule: {},
@@ -11,59 +12,53 @@ const defaultData = {
   portfolioPhotos: [],
 };
 
-let data = null; // Починаємо з null, щоб чітко контролювати ініціалізацію
+let data = null;
 
-// Функція для завантаження даних з файлу
 const loadData = () => {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const rawData = fs.readFileSync(DATA_FILE, "utf8");
 
       if (rawData.trim() === "") {
-        // Якщо файл існує, але порожній або містить тільки пробіли
         console.log(
           "data.json існує, але порожній. Ініціалізую дефолтні дані."
         );
         data = { ...defaultData };
-        saveData(); // Зберігаємо дефолтні дані, щоб файл був валідним JSON
+        saveData();
       } else {
         const parsedData = JSON.parse(rawData);
-        // Об'єднуємо завантажені дані з дефолтною структурою.
-        // Це гарантує, що всі дефолтні поля (включаючи users як масив) будуть присутні.
         data = { ...defaultData, ...parsedData };
 
-        // Додаткова перевірка: якщо `users` не є масивом після парсингу, виправляємо
         if (!Array.isArray(data.users)) {
           console.warn(
             "Попередження: data.users не є масивом після завантаження. Виправляю..."
           );
           data.users = [];
-          saveData(); // Зберігаємо виправлені дані
+          saveData();
         }
         console.log("Дані успішно завантажено з data.json");
+        console.log("Кількість користувачів:", data.users.length);
       }
     } else {
-      // Якщо файл не існує
       console.log(
         "data.json не знайдено. Створюю новий файл з дефолтними даними."
       );
-      data = { ...defaultData }; // Ініціалізуємо дефолтні дані
-      saveData(); // Зберігаємо дефолтні дані, щоб створити файл
+      data = { ...defaultData };
+      saveData();
     }
   } catch (error) {
-    // Ловимо помилки читання файлу або парсингу JSON
     console.error(
       "Критична помилка при завантаженні/парсингу data.json:",
       error
     );
     console.log("Відновлення: Ініціалізую дефолтні дані.");
-    data = { ...defaultData }; // У випадку будь-якої помилки, ініціалізуємо дефолтні дані
-    saveData(); // Спроба зберегти, щоб виправити можливий пошкоджений файл
+    data = { ...defaultData };
+    saveData();
   }
 };
 
-// Функція для збереження даних у файл
 const saveData = () => {
+  // Ця функція є, але не експортована
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
   } catch (error) {
@@ -71,17 +66,12 @@ const saveData = () => {
   }
 };
 
-// Завантажуємо дані при старті модуля.
-// Це має відбутися один раз при запуску програми.
 loadData();
 
-// --- Функції для користувачів та розкладу ---
 const findUser = (id) => {
-  // Додаткова перевірка перед використанням, щоб уникнути помилок,
-  // хоча loadData має вже гарантувати, що users - це масив.
   if (!data || !Array.isArray(data.users)) {
     console.error("data або data.users не ініціалізовано коректно в findUser.");
-    return undefined; // Повертаємо undefined, якщо users не є масивом
+    return undefined;
   }
   return data.users.find((user) => user.id === id);
 };
@@ -101,6 +91,17 @@ const saveUser = (user) => {
   }
   saveData();
 };
+
+const getAllUsers = () => {
+  if (!data || !Array.isArray(data.users)) {
+    console.error(
+      "data або data.users не ініціалізовано коректно в getAllUsers."
+    );
+    return [];
+  }
+  return data.users;
+};
+
 const getSchedule = () => data.schedule;
 const setSchedule = (newSchedule) => {
   data.schedule = newSchedule;
@@ -111,8 +112,6 @@ const setBlockedDates = (newBlockedDates) => {
   data.blockedDates = newBlockedDates;
   saveData();
 };
-
-// --- Функції для ПОРТФОЛІО ---
 
 const getPortfolioPhotos = () => {
   return data.portfolioPhotos;
@@ -138,6 +137,7 @@ const deletePortfolioPhoto = (index) => {
 module.exports = {
   findUser,
   saveUser,
+  getAllUsers,
   getSchedule,
   setSchedule,
   getBlockedDates,
@@ -145,4 +145,5 @@ module.exports = {
   getPortfolioPhotos,
   addPortfolioPhoto,
   deletePortfolioPhoto,
+  saveData, // <--- ДОДАЙТЕ ЦЕЙ РЯДОК
 };

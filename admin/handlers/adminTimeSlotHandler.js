@@ -1,85 +1,79 @@
 const { Markup } = require("telegraf");
 const { getTranslation } = require("../../data/translations");
-const { getSchedule, updateSchedule } = require("../../data/data");
-const { userStates } = require("../../handlers/userPhone"); // Зверніть увагу на відносний шлях
+const { getSchedule, setSchedule } = require("../../data/data");
+const { userStates } = require("../../handlers/userPhone");
+const { AVAILABLE_TIMES } = require("../../keyboard/timeSlots");
+const moment = require("moment-timezone");
 
-/**
- * Генерує всі можливі часові слоти для одного дня (з 9:00 до 18:00 з інтервалом 30 хв).
- * @returns {string[]} Масив часових слотів у форматі "HH:MM".
- */
-const generateAllTimeSlots = () => {
-  const slots = [];
-  for (let h = 9; h <= 18; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      if (h === 18 && m > 0) continue; // Виключаємо 18:30
-      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    }
-  }
-  return slots;
-};
-
-/**
- * Генерує інлайн-клавіатуру з часовими слотами для адмін-блокування.
- * Показує статус слотів (зарезервовано, заблоковано адміном).
- * @param {string} dateString - Дата у форматі 'YYYY-MM-DD'.
- * @param {string} lang - Мова користувача.
- * @returns {Object} Інлайн-клавіатура Telegraf.
- */
 const getAdminTimeSlotsKeyboard = (dateString, lang) => {
   const schedule = getSchedule();
   const daySchedule = schedule[dateString] || {};
-  const allPossibleSlots = generateAllTimeSlots();
+  const allPossibleSlots = [...new Set(AVAILABLE_TIMES)].sort((a, b) => {
+    const [hA, mA] = a.split(":").map(Number);
+    const [hB, mB] = b.split(":").map(Number);
+    if (hA === hB) return mA - mB;
+    return hA - hB;
+  });
 
   const buttons = [];
-  const now = new Date();
-  const todayString = now.toISOString().slice(0, 10);
+  const now = moment().tz("Europe/Warsaw");
+  const todayString = now.format("YYYY-MM-DD");
 
-  // Додаємо слоти у кнопки
   for (const slot of allPossibleSlots) {
     const [hours, minutes] = slot.split(":").map(Number);
-    const slotDateTime = new Date(dateString);
-    slotDateTime.setHours(hours, minutes, 0, 0);
+    const slotDateTime = moment.tz(
+      `${dateString} ${slot}`,
+      "YYYY-MM-DD HH:mm",
+      "Europe/Warsaw"
+    );
 
     let buttonText = slot;
-    let callbackData = `admin_toggle_hour_${dateString}_${slot}`; // Колбек для перемикання години
+    let callbackData = `admin_toggle_hour_${dateString}_${slot}`;
 
     const slotInfo = daySchedule[slot];
+    let isBlockedByAdmin = false;
+    let isBooked = false;
+    let isPast = false;
+
     if (slotInfo) {
       if (slotInfo.status === "booked") {
-        // Якщо зарезервовано клієнтом, то цей слот не можна змінити, але можна показати
-        buttonText = `${slot} 🧑`; // Позначаємо як зайнятий клієнтом
-        callbackData = "ignore_slot_booked"; // Ігноруємо натискання
+        isBooked = true;
       } else if (slotInfo.status === "blocked_admin") {
-        buttonText = `${slot} ❌`; // Позначаємо як заблокований адміном
+        isBlockedByAdmin = true;
       }
     }
 
-    // Якщо слот у минулому, його теж не можна змінити
-    if (
-      (dateString === todayString && slotDateTime < now) || // Сьогодні і час вже минув
-      new Date(dateString) < new Date(todayString) // День в минулому
-    ) {
-      buttonText = `${slot} ⌛`; // Минулий час
-      callbackData = "ignore_past_slot";
+    if (slotDateTime.isSameOrBefore(now)) {
+      isPast = true;
+    }
+
+    if (isBlockedByAdmin) {
+      buttonText = `${slot} ❌`;
+    } else if (isBooked) {
+      buttonText = `${slot} 🧑`;
+    } else if (isPast) {
+      buttonText = `${slot} ⌛`;
+    }
+
+    if (isBooked || isPast) {
+      callbackData = "ignore_slot";
     }
 
     buttons.push(Markup.button.callback(buttonText, callbackData));
   }
 
-  // Розбиваємо кнопки на ряди по 4
   const rows = [];
   for (let i = 0; i < buttons.length; i += 4) {
     rows.push(buttons.slice(i, i + 4));
   }
 
-  // Додаємо кнопку "Готово" та "Назад до календаря"
   rows.push([
     Markup.button.callback(
       getTranslation("button_finish_blocking_hours", lang),
       `admin_finish_hour_blocking_${dateString}`
     ),
     Markup.button.callback(
-      getTranslation("button_back_to_calendar", lang), // ВИПРАВЛЕНО: Використовуємо універсальний ключ
+      getTranslation("button_back_to_calendar", lang),
       `admin_back_to_calendar_from_hours_${dateString}`
     ),
   ]);
@@ -87,14 +81,10 @@ const getAdminTimeSlotsKeyboard = (dateString, lang) => {
   return Markup.inlineKeyboard(rows);
 };
 
-/**
- * Обробляє вибір години для блокування/розблокування адміном.
- * @param {Object} ctx - Об'єкт контексту Telegraf.
- */
 const handleAdminTimeSlotCallback = async (ctx) => {
   const userId = ctx.from.id;
   const callbackData = ctx.callbackQuery.data;
-  const user = userStates[userId]; // Отримуємо стан користувача
+  const user = userStates[userId];
 
   await ctx.answerCbQuery();
 
@@ -104,23 +94,19 @@ const handleAdminTimeSlotCallback = async (ctx) => {
   }
 
   const lang = user.lang;
-  const currentSelectedDate = user.current_admin_date; // Отримуємо дату з userStates
+  const currentSelectedDate = user.current_admin_date;
 
   if (!currentSelectedDate) {
     await ctx.reply(getTranslation("error_try_again", lang));
     return;
   }
 
-  // Обробка натискання на слот для блокування/розблокування
   if (callbackData.startsWith("admin_toggle_hour_")) {
     const parts = callbackData.split("_");
-    const dateString = parts[3]; // 'YYYY-MM-DD'
-    const timeSlot = parts[4]; // 'HH:MM'
+    const dateString = parts[3];
+    const timeSlot = parts[4];
 
     if (dateString !== currentSelectedDate) {
-      console.warn(
-        `Admin tried to toggle hour on wrong date. Expected: ${currentSelectedDate}, Got: ${dateString}`
-      );
       await ctx.reply(getTranslation("error_try_again", lang));
       return;
     }
@@ -135,7 +121,6 @@ const handleAdminTimeSlotCallback = async (ctx) => {
       daySchedule[timeSlot] &&
       daySchedule[timeSlot].status === "blocked_admin"
     ) {
-      // Слот вже заблокований адміном, розблоковуємо
       delete daySchedule[timeSlot];
       messageText = getTranslation("admin_hour_unblocked", lang, {
         date: dateString,
@@ -145,10 +130,8 @@ const handleAdminTimeSlotCallback = async (ctx) => {
       daySchedule[timeSlot] &&
       daySchedule[timeSlot].status === "booked"
     ) {
-      // Слот зайнятий клієнтом, не можемо блокувати
       messageText = getTranslation("slot_not_available", lang);
     } else {
-      // Слот вільний, блокуємо
       daySchedule[timeSlot] = {
         status: "blocked_admin",
         timestamp: new Date().toISOString(),
@@ -160,53 +143,45 @@ const handleAdminTimeSlotCallback = async (ctx) => {
       });
     }
 
-    updateSchedule(schedule);
+    setSchedule(schedule);
 
-    // Оновлюємо клавіатуру, щоб відобразити зміни
     try {
       await ctx.editMessageReplyMarkup(
         getAdminTimeSlotsKeyboard(dateString, lang).reply_markup
       );
-      await ctx.answerCbQuery(messageText, { show_alert: true }); // Показати сповіщення
+      await ctx.answerCbQuery(messageText, { show_alert: true });
     } catch (error) {
-      console.error("Error editing time slots keyboard for admin:", error);
-      await ctx.reply(messageText); // Відправити повідомлення, якщо не вдалося відредагувати
+      await ctx.reply(messageText);
     }
     return;
   }
 
-  // Обробка кнопки "Готово"
   if (callbackData.startsWith("admin_finish_hour_blocking_")) {
-    // Видаляємо стан адміна і повертаємо його до головного меню
     delete userStates[userId];
-    const userFound = require("../../data/data").findUser(userId); // Повторний findUser для збереження
+    const userFound = require("../../data/data").findUser(userId);
     if (userFound) {
       userFound.state = null;
       require("../../data/data").saveUser(userFound);
     }
 
     try {
-      await ctx.editMessageReplyMarkup({}); // Прибираємо інлайн-кнопки
+      await ctx.editMessageReplyMarkup({});
       await ctx.reply(
-        getTranslation("choose_action", lang), // Використаємо choose_action або інше відповідне
-        require("../keyboard/adminMenu").getAdminMenuKeyboard(lang) // Повертаємо головне адмін-меню
+        getTranslation("choose_action", lang),
+        require("../keyboard/adminMenu").getAdminMenuKeyboard(lang)
       );
     } catch (error) {
-      console.error("Error finishing hour blocking:", error);
       await ctx.reply(getTranslation("error_try_again", lang));
     }
     return;
   }
 
-  // Обробка кнопки "Назад до календаря"
   if (callbackData.startsWith("admin_back_to_calendar_from_hours_")) {
-    const now = new Date();
-    // Повертаємося до стану вибору дати для блокування годин
+    const now = moment().tz("Europe/Warsaw");
     userStates[userId] = {
-      state: "admin_waiting_for_date_for_time_block", // Встановлюємо правильний стан
+      state: "admin_waiting_for_date_for_time_block",
       lang: lang,
     };
-    // Також оновлюємо user в data.js, щоб стан зберігався
     const userFound = require("../../data/data").findUser(userId);
     if (userFound) {
       userFound.state = "admin_waiting_for_date_for_time_block";
@@ -215,25 +190,22 @@ const handleAdminTimeSlotCallback = async (ctx) => {
 
     try {
       await ctx.editMessageReplyMarkup(
-        // Редагуємо повідомлення з клавіатурою
         require("../../keyboard/calendar").getCalendarInlineKeyboard(
-          now.getFullYear(),
-          now.getMonth(),
+          now.year(), // Виправлено: використовуємо .year()
+          now.month(), // Виправлено: використовуємо .month() (0-індексований місяць)
           lang,
-          true // true для адмін-режиму
+          true
         ).reply_markup
       );
       await ctx.editMessageText(
         getTranslation("admin_choose_date_for_hours_block", lang)
-      ); // Змінюємо текст
+      );
     } catch (error) {
-      console.error("Error going back to admin calendar from hours:", error);
       await ctx.reply(
-        // Надсилаємо нове повідомлення, якщо редагування не вдалося
         getTranslation("admin_choose_date_for_hours_block", lang),
         require("../../keyboard/calendar").getCalendarInlineKeyboard(
-          now.getFullYear(),
-          now.getMonth(),
+          now.year(),
+          now.month(),
           lang,
           true
         )
@@ -242,7 +214,6 @@ const handleAdminTimeSlotCallback = async (ctx) => {
     return;
   }
 
-  // Обробка ігнорованих слотів
   if (
     callbackData === "ignore_slot_booked" ||
     callbackData === "ignore_past_slot"

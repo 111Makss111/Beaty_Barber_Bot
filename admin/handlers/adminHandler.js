@@ -6,7 +6,7 @@ const {
   findUser,
   saveUser,
   getSchedule,
-  updateSchedule,
+  setSchedule, // ВИПРАВЛЕНО: Змінено updateSchedule на setSchedule
 } = require("../../data/data");
 const { userStates } = require("../../handlers/userPhone");
 const { getCalendarInlineKeyboard } = require("../../keyboard/calendar");
@@ -193,7 +193,7 @@ const handleAdminCalendarCallback = async (ctx) => {
           }
         });
         schedule[selectedDateString] = daySchedule;
-        updateSchedule(schedule);
+        setSchedule(schedule); // ВИПРАВЛЕНО: Використовуємо setSchedule
         await ctx.reply(
           getTranslation("admin_date_unblocked", lang, {
             date: selectedDateString,
@@ -208,7 +208,7 @@ const handleAdminCalendarCallback = async (ctx) => {
           };
         });
         schedule[selectedDateString] = daySchedule;
-        updateSchedule(schedule);
+        setSchedule(schedule); // ВИПРАВЛЕНО: Використовуємо setSchedule
         await ctx.reply(
           getTranslation("admin_date_blocked", lang, {
             date: selectedDateString,
