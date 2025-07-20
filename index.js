@@ -1,8 +1,8 @@
 // index.js
-
 require("dotenv").config();
+const express = require("express");
 const { Telegraf } = require("telegraf");
-const cron = require("node-cron"); // Повертаємо імпорт cron, оскільки ви просили логування в index.js
+const cron = require("node-cron");
 
 const startCommand = require("./handlers/start");
 const {
@@ -38,7 +38,6 @@ const {
   handleAdminMenuChoice,
   handleAdminCalendarCallback,
 } = require("./admin/handlers/adminHandler");
-
 const {
   handleAdminTimeSlotCallback,
 } = require("./admin/handlers/adminTimeSlotHandler");
@@ -137,7 +136,6 @@ bot.on("photo", async (ctx) => {
   const userId = ctx.from.id;
   const user = findUser(userId);
   const currentState = userStates[userId] ? userStates[userId].state : null;
-
   if (
     user &&
     user.is_admin &&
@@ -155,21 +153,16 @@ bot.on("callback_query", async (ctx) => {
   const user = findUser(userId);
   const currentState = userStates[userId] ? userStates[userId].state : null;
   const callbackData = ctx.callbackQuery.data;
-
   await ctx.answerCbQuery();
-
   if (!user) {
     await ctx.reply(getTranslation("error_try_again", "ua"));
     return;
   }
-
   const lang = user.lang;
-
   if (callbackData === "lang_ua" || callbackData === "lang_pl") {
     await processLanguageSelection(ctx, callbackData.split("_")[1]);
     return;
   }
-
   if (
     user.is_admin &&
     (callbackData.startsWith("admin_records_period_") ||
@@ -180,7 +173,6 @@ bot.on("callback_query", async (ctx) => {
     await handleAdminRecordsCallback(ctx);
     return;
   }
-
   if (
     user.is_admin &&
     (callbackData.startsWith("admin_portfolio_") ||
@@ -189,7 +181,6 @@ bot.on("callback_query", async (ctx) => {
     await handlePortfolioCallback(ctx);
     return;
   }
-
   if (
     callbackData.startsWith("client_portfolio_") ||
     callbackData === "back_to_main_menu_from_client_portfolio"
@@ -197,12 +188,10 @@ bot.on("callback_query", async (ctx) => {
     await handleClientPortfolioCallback(ctx);
     return;
   }
-
   if (user.is_admin && currentState === "admin_waiting_for_hour_to_block") {
     await handleAdminTimeSlotCallback(ctx);
     return;
   }
-
   if (
     user.is_admin &&
     (callbackData.startsWith("cal_admin_") ||
@@ -219,12 +208,10 @@ bot.on("callback_query", async (ctx) => {
       return;
     }
   }
-
   if (callbackData === "back_to_main_menu_from_profile") {
     await handleProfileCallback(ctx);
     return;
   }
-
   if (
     currentState === "waiting_for_service_selection" ||
     callbackData === "back_to_main_menu"
@@ -232,7 +219,6 @@ bot.on("callback_query", async (ctx) => {
     await handleServiceSelection(ctx);
     return;
   }
-
   if (
     currentState === "waiting_for_date_selection" ||
     callbackData.startsWith("cal_") ||
@@ -242,7 +228,6 @@ bot.on("callback_query", async (ctx) => {
     await handleCalendarCallback(ctx);
     return;
   }
-
   if (
     currentState === "waiting_for_time_selection" ||
     callbackData.startsWith("time_") ||
@@ -252,7 +237,6 @@ bot.on("callback_query", async (ctx) => {
     await handleTimeSlotCallback(ctx);
     return;
   }
-
   if (
     currentState === "waiting_for_confirmation" ||
     callbackData === "confirm_booking" ||
@@ -261,7 +245,6 @@ bot.on("callback_query", async (ctx) => {
     await handleFinalBookingCallback(ctx, bot);
     return;
   }
-
   if (
     currentState === "waiting_for_booking_to_cancel" ||
     currentState === "waiting_for_cancel_confirmation" ||
@@ -276,25 +259,56 @@ bot.on("callback_query", async (ctx) => {
   }
 });
 
-console.log("Спроба ініціалізації bot.launch()...");
-bot.launch(); // Запускаємо бота
+const PORT = process.env.PORT || 3000;
+const DOMAIN =
+  process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_DOMAIN || "";
 
-// Тепер ці виклики виконаються одразу після запуску бота
-console.log("Бот успішно запущено! Готовий до роботи.");
-console.log("------------------------------------------");
+const app = express();
+app.use(express.json());
 
-// Запускаємо крон-завдання для періодичного логування активності бота
+app.get("/", (req, res) => {
+  res.send("Бот працює");
+});
+
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", time: new Date().toISOString() });
+});
+
+app.use(bot.webhookCallback("/webhook"));
+
+async function start() {
+  if (DOMAIN) {
+    const url = `${DOMAIN.replace(/\/$/, "")}/webhook`;
+    try {
+      await bot.telegram.setWebhook(url);
+      console.log(`Webhook встановлено: ${url}`);
+    } catch (err) {
+      console.error("Помилка встановлення webhook:", err);
+    }
+    app.listen(PORT, () => {
+      console.log(`HTTP сервер запущено на порті ${PORT}`);
+    });
+  } else {
+    console.log("WEBHOOK_DOMAIN не задано. Запуск у режимі long polling.");
+    await bot.launch();
+  }
+}
+
+console.log("Спроба запуску бота...");
+start().then(() => {
+  console.log("Бот запущено");
+  console.log("------------------------------------------");
+});
+
 cron.schedule(
-  "* * * * *", // Кожну хвилину
+  "* * * * *",
   () => {
     const currentTime = new Date().toLocaleTimeString("uk-UA", {
       timeZone: "Europe/Warsaw",
     });
     console.log(`[${currentTime}] БОТ ЗАПУЩЕНО. Працює коректно.`);
   },
-  {
-    timezone: "Europe/Warsaw", // Встановлюємо часовий пояс для крон-завдання
-  }
+  { timezone: "Europe/Warsaw" }
 );
 console.log(
   "Періодичне логування активності бота заплановано (кожну хвилину)."
@@ -303,12 +317,13 @@ console.log(
 initCleanupScheduler();
 initNotifications(bot);
 
-// Реєструємо обробники для коректного завершення роботи бота при отриманні сигналів SIGINT/SIGTERM
 process.once("SIGINT", () => {
   console.log("Отримано SIGINT. Зупинка бота...");
   bot.stop("SIGINT");
+  process.exit(0);
 });
 process.once("SIGTERM", () => {
   console.log("Отримано SIGTERM. Зупинка бота...");
   bot.stop("SIGTERM");
+  process.exit(0);
 });
