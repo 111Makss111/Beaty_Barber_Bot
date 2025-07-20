@@ -317,13 +317,16 @@ console.log(
 initCleanupScheduler();
 initNotifications(bot);
 
+const isLongPolling = !DOMAIN; // Якщо немає домену, працюємо через polling
+
 process.once("SIGINT", () => {
-  console.log("Отримано SIGINT. Зупинка бота...");
-  bot.stop("SIGINT");
+  console.log("Отримано SIGINT. Зупинка...");
+  if (isLongPolling) bot.stop("SIGINT");
   process.exit(0);
 });
+
 process.once("SIGTERM", () => {
-  console.log("Отримано SIGTERM. Зупинка бота...");
-  bot.stop("SIGTERM");
+  console.log("Отримано SIGTERM. Зупинка...");
+  if (isLongPolling) bot.stop("SIGTERM");
   process.exit(0);
 });
